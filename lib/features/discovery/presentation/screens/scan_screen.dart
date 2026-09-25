@@ -117,112 +117,121 @@ class _ScanBodyState extends ConsumerState<_ScanBody> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final scanState = ref.watch(scanControllerProvider);
     final resumable = ref.watch(resumableSessionProvider).value;
     final (plan, planError) = _buildPlan();
     final progress = scanState.progress;
+    final running = scanState.isRunning;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const _AuthorizationNotice(),
-        if (resumable != null && !scanState.isRunning)
-          _ResumeBanner(
-            session: resumable,
-            onResume: () => _resume(resumable),
-            onDiscard: () =>
-                ref.read(scanControllerProvider.notifier).discard(resumable),
-          ),
-        if (scanState.failure != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Card(child: FailureView(failure: scanState.failure!)),
-          ),
-        if (progress != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: ScanProgressPanel(
-              progress: progress,
-              onPause: ref.read(scanControllerProvider.notifier).pause,
-              onCancel: ref.read(scanControllerProvider.notifier).cancel,
-              onResume:
-                  progress.status == ScanSessionStatus.paused &&
-                      resumable?.id == progress.sessionId
-                  ? () => _resume(resumable!)
-                  : null,
-            ),
-          ),
-        Text('Kapsam', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        RadioGroup<ScanScopeType>(
-          groupValue: _scope,
-          onChanged: (value) {
-            if (value != null && !scanState.isRunning) {
-              setState(() => _scope = value);
-            }
-          },
-          child: Column(
-            children: [
-              for (final scope in ScanScopeType.values)
-                RadioListTile<ScanScopeType>(
-                  value: scope,
-                  enabled: !scanState.isRunning,
-                  title: Text(
-                    scope == ScanScopeType.allAccessiblePrivate172
-                        ? '${scope.label} (önerilen)'
-                        : scope.label,
-                  ),
-                  subtitle: Text(_scopeDescription(scope)),
-                ),
-            ],
-          ),
-        ),
-        if (_scope == ScanScopeType.customCidr)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: TextField(
-              controller: _cidrController,
-              enabled: !scanState.isRunning,
-              decoration: InputDecoration(
-                labelText: 'CIDR',
-                hintText: '172.16.20.0/24',
-                helperText: '172.16.0.0/12 içinde ve yetkili olduğunuz bir ağ',
-                errorText: _cidrError,
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-        const SizedBox(height: 16),
-        Text('Tarama önizlemesi', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        if (plan == null)
-          Text(planError ?? 'Kapsam seçin.', style: theme.textTheme.bodyMedium)
-        else
-          _PlanPreview(plan: plan),
-        const SizedBox(height: 16),
-        Row(
+    final scopeSection = _Section(
+      title: 'Kapsam',
+      subtitle: 'Hangi adreslerin taranacağını seçin.',
+      child: RadioGroup<ScanScopeType>(
+        groupValue: _scope,
+        onChanged: (value) {
+          if (value != null && !running) setState(() => _scope = value);
+        },
+        child: Column(
           children: [
-            FilledButton.icon(
-              onPressed: plan == null || scanState.isRunning
-                  ? null
-                  : () => _start(plan),
-              icon: const ThemedHugeIcon(HugeIcons.strokeRoundedPlay, size: 18),
-              label: Text(
-                scanState.isRunning ? 'Tarama sürüyor' : 'Taramayı başlat',
+            for (final scope in ScanScopeType.values)
+              _ScopeOption(
+                scope: scope,
+                description: _scopeDescription(scope),
+                selected: scope == _scope,
+                enabled: !running,
+                onTap: () => setState(() => _scope = scope),
+                child: scope == ScanScopeType.customCidr
+                    ? TextField(
+                        controller: _cidrController,
+                        enabled: !running,
+                        decoration: InputDecoration(
+                          labelText: 'CIDR',
+                          hintText: '172.16.20.0/24',
+                          helperText:
+                              '172.16.0.0/12 içinde ve yetkili olduğunuz bir ağ',
+                          errorText: _cidrError,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      )
+                    : null,
               ),
-            ),
-            const SizedBox(width: 12),
-            TextButton(
-              onPressed: () => ref
-                  .read(shellDestinationProvider.notifier)
-                  .go(ShellDestination.settings),
-              child: const Text('Tarama ayarları'),
-            ),
           ],
         ),
-      ],
+      ),
+    );
+
+    final previewSection = _Section(
+      title: 'Tarama önizlemesi',
+      subtitle: 'Başlatmadan önce ne yapılacağını kontrol edin.',
+      child: _PlanPreview(
+        plan: plan,
+        error: planError,
+        running: running,
+        onStart: plan == null || running ? null : () => _start(plan),
+        onOpenSettings: () => ref
+            .read(shellDestinationProvider.notifier)
+            .go(ShellDestination.settings),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const maxContentWidth = 1180.0;
+        final wide = constraints.maxWidth >= 980;
+        final sidePadding = constraints.maxWidth > maxContentWidth + 48
+            ? (constraints.maxWidth - maxContentWidth) / 2
+            : 24.0;
+        return ListView(
+          padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 32),
+          children: [
+            const _AuthorizationNotice(),
+            if (resumable != null && !running)
+              _ResumeBanner(
+                session: resumable,
+                onResume: () => _resume(resumable),
+                onDiscard: () => ref
+                    .read(scanControllerProvider.notifier)
+                    .discard(resumable),
+              ),
+            if (scanState.failure != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Card(child: FailureView(failure: scanState.failure!)),
+              ),
+            if (progress != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: ScanProgressPanel(
+                  progress: progress,
+                  onPause: ref.read(scanControllerProvider.notifier).pause,
+                  onCancel: ref.read(scanControllerProvider.notifier).cancel,
+                  onResume:
+                      progress.status == ScanSessionStatus.paused &&
+                          resumable?.id == progress.sessionId
+                      ? () => _resume(resumable!)
+                      : null,
+                ),
+              ),
+            if (wide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 11, child: scopeSection),
+                  const SizedBox(width: 24),
+                  Expanded(flex: 9, child: previewSection),
+                ],
+              )
+            else ...[
+              scopeSection,
+              const SizedBox(height: 28),
+              previewSection,
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -240,7 +249,7 @@ class _ScanBodyState extends ConsumerState<_ScanBody> {
       ScanScopeType.customCidr =>
         'Yalnızca 172.16.0.0/12 içinde, yetkili olduğunuz bir CIDR',
       ScanScopeType.fullPrivate172Block =>
-        'Gelişmiş: 1.048.576 adres. Onay gerektirir; parçalı kuyruk, '
+        '1.048.576 adres. Onay gerektirir; parçalı kuyruk, '
             'duraklat/devam et desteği.',
     };
   }
@@ -293,31 +302,250 @@ class _AuthorizationNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        color: scheme.secondaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.secondary.withValues(alpha: 0.25)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ThemedHugeIcon(
             HugeIcons.strokeRoundedShield01,
-            size: 18,
-            color: scheme.onSurfaceVariant,
+            size: 20,
+            color: scheme.secondary,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              'Yalnızca yönetme izniniz olan ağlarda kullanın. Tarama düşük '
-              'hızdadır ve yalnızca cihaz keşfi yapar: güvenlik açığı arama, '
-              'parola deneme veya kapsamlı port taraması yapılmaz.',
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Yalnızca yetkili olduğunuz ağlarda kullanın',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tarama düşük hızdadır ve yalnızca cihaz keşfi yapar: '
+                  'güvenlik açığı arama, parola deneme veya kapsamlı port '
+                  'taraması yapılmaz.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 14),
+        child,
+      ],
+    );
+  }
+}
+
+/// A selectable card for one scope option; the radio stays in the card so
+/// the whole card and the radio both select it.
+class _ScopeOption extends StatelessWidget {
+  const _ScopeOption({
+    required this.scope,
+    required this.description,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+    this.child,
+  });
+
+  final ScanScopeType scope;
+  final String description;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  /// Extra input shown inside the card while it is selected.
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final (icon, badge) = switch (scope) {
+      ScanScopeType.currentSubnet => (HugeIcons.strokeRoundedWifi01, null),
+      ScanScopeType.allAccessiblePrivate172 => (
+        HugeIcons.strokeRoundedHierarchySquare02,
+        _Badge.recommended,
+      ),
+      ScanScopeType.customCidr => (HugeIcons.strokeRoundedEdit02, null),
+      ScanScopeType.fullPrivate172Block => (
+        HugeIcons.strokeRoundedGlobe02,
+        _Badge.advanced,
+      ),
+    };
+    final radius = BorderRadius.circular(14);
+
+    return Opacity(
+      opacity: enabled || selected ? 1 : 0.55,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: selected
+                ? scheme.primaryContainer.withValues(alpha: 0.35)
+                : scheme.surfaceContainerLow,
+            borderRadius: radius,
+            border: Border.all(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: radius,
+              onTap: enabled ? onTap : null,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? scheme.primary.withValues(alpha: 0.15)
+                                : scheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: ThemedHugeIcon(
+                            icon,
+                            size: 20,
+                            color: selected
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    scope.label,
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  ?badge,
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                description,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Radio<ScanScopeType>(value: scope, enabled: enabled),
+                      ],
+                    ),
+                    if (selected && child != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(54, 14, 8, 0),
+                        child: child,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge(this.text, {this.warning = false});
+
+  static const recommended = _Badge('Önerilen');
+  static const advanced = _Badge('Gelişmiş', warning: true);
+
+  final String text;
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final color = warning ? scheme.tertiary : scheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -371,68 +599,271 @@ class _ResumeBanner extends StatelessWidget {
 }
 
 class _PlanPreview extends StatelessWidget {
-  const _PlanPreview({required this.plan});
+  const _PlanPreview({
+    required this.plan,
+    required this.error,
+    required this.running,
+    required this.onStart,
+    required this.onOpenSettings,
+  });
 
-  final ScanPlan plan;
+  final ScanPlan? plan;
+  final String? error;
+  final bool running;
+  final VoidCallback? onStart;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final settings = plan.settings;
-    const shownCidrs = 12;
-    final cidrs = plan.chunks.map((c) => c.cidr.toString()).toList();
+    final scheme = theme.colorScheme;
+    final plan = this.plan;
 
-    Widget row(String label, String value) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (plan == null)
+            Row(
+              children: [
+                ThemedHugeIcon(
+                  HugeIcons.strokeRoundedInformationCircle,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    error ?? 'Kapsam seçin.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            )
+          else
+            ..._details(context, plan),
+          const SizedBox(height: 18),
           SizedBox(
-            width: 180,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            height: 44,
+            child: FilledButton.icon(
+              onPressed: onStart,
+              icon: const ThemedHugeIcon(HugeIcons.strokeRoundedPlay, size: 18),
+              label: Text(running ? 'Tarama sürüyor' : 'Taramayı başlat'),
             ),
           ),
-          Expanded(child: SelectableText(value)),
+          const SizedBox(height: 6),
+          Center(
+            child: TextButton.icon(
+              onPressed: onOpenSettings,
+              icon: const ThemedHugeIcon(
+                HugeIcons.strokeRoundedSettings01,
+                size: 16,
+              ),
+              label: const Text('Tarama ayarları'),
+            ),
+          ),
         ],
       ),
     );
+  }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  List<Widget> _details(BuildContext context, ScanPlan plan) {
+    final settings = plan.settings;
+    const shownCidrs = 12;
+    final cidrs = plan.chunks.map((c) => c.cidr.toString()).toList();
+    return [
+      Row(
+        children: [
+          Expanded(
+            child: _StatTile(
+              icon: HugeIcons.strokeRoundedGridView,
+              label: 'Aday IP',
+              value: formatCount(plan.totalCandidateHosts),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatTile(
+              icon: HugeIcons.strokeRoundedTimer02,
+              label: 'Tahmini süre',
+              value: formatDuration(plan.estimatedDuration),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatTile(
+              icon: HugeIcons.strokeRoundedLayers01,
+              label: 'Parça',
+              value: formatCount(cidrs.length),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 18),
+      _Detail(
+        label: 'CIDR listesi (${formatCount(cidrs.length)} parça)',
+        child: SelectableText(
+          cidrs.length <= shownCidrs
+              ? cidrs.join(', ')
+              : '${cidrs.take(shownCidrs).join(', ')} … ve '
+                    '${formatCount(cidrs.length - shownCidrs)} parça daha',
+        ),
+      ),
+      _Detail(
+        label: 'Toplam aday IP',
+        child: Text(
+          '${formatCount(plan.totalCandidateHosts)} '
+          '(${formatCount(plan.totalAddresses)} adres; her parçanın ağ ve '
+          'broadcast adresi atlanır)',
+        ),
+      ),
+      _Detail(
+        label: 'Keşif yöntemleri',
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [for (final method in plan.methods) _Tag(method.label)],
+        ),
+      ),
+      _Detail(
+        label: 'Eşzamanlılık / zaman aşımı',
+        child: Text(
+          '${settings.concurrency} eşzamanlı · ping '
+          '${settings.pingTimeout.inMilliseconds} ms · port '
+          '${settings.portProbeTimeout.inMilliseconds} ms',
+        ),
+      ),
+      _Detail(
+        label: 'Kontrol edilen portlar',
+        last: true,
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
           children: [
-            row(
-              'CIDR listesi (${formatCount(cidrs.length)} parça)',
-              cidrs.length <= shownCidrs
-                  ? cidrs.join(', ')
-                  : '${cidrs.take(shownCidrs).join(', ')} … ve '
-                        '${formatCount(cidrs.length - shownCidrs)} parça daha',
-            ),
-            row(
-              'Toplam aday IP',
-              '${formatCount(plan.totalCandidateHosts)} '
-                  '(${formatCount(plan.totalAddresses)} adres; her parçanın '
-                  'ağ ve broadcast adresi atlanır)',
-            ),
-            row('Tahmini süre', formatDuration(plan.estimatedDuration)),
-            row(
-              'Keşif yöntemleri',
-              plan.methods.map((method) => method.label).join(', '),
-            ),
-            row(
-              'Eşzamanlılık / zaman aşımı',
-              '${settings.concurrency} eşzamanlı · ping '
-                  '${settings.pingTimeout.inMilliseconds} ms · port '
-                  '${settings.portProbeTimeout.inMilliseconds} ms',
-            ),
-            row('Kontrol edilen portlar', settings.limitedPorts.join(', ')),
+            for (final port in settings.limitedPorts) _Tag('$port', mono: true),
           ],
+        ),
+      ),
+    ];
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final List<List<dynamic>> icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ThemedHugeIcon(icon, size: 14, color: scheme.primary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Detail extends StatelessWidget {
+  const _Detail({required this.label, required this.child, this.last = false});
+
+  final String label;
+  final Widget child;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: last ? 0 : 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 5),
+          DefaultTextStyle.merge(
+            style: theme.textTheme.bodyMedium,
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag(this.text, {this.mono = false});
+
+  final String text;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Text(
+        text,
+        style: theme.textTheme.labelMedium?.copyWith(
+          fontFeatures: mono ? const [FontFeature.tabularFigures()] : null,
         ),
       ),
     );
