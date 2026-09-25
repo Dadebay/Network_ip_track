@@ -92,7 +92,8 @@ class DeviceQuery {
 }
 
 /// Applies [query] to [devices]. Search matches IP, MAC (with or without
-/// separators), hostname, vendor and the user's custom name.
+/// separators), hostname, announced name, model, vendor and the user's
+/// custom name.
 ///
 /// [dailyTrafficBytes] (today's total per device id) drives the daily
 /// traffic sort. Devices without traffic data always sort last, in either
@@ -112,6 +113,8 @@ List<Device> applyDeviceQuery(
       device.currentIp.toString(),
       ?mac,
       ?device.hostname,
+      ?device.discoveredName,
+      ?device.model,
       ?device.vendor,
       ?device.customName,
     ];

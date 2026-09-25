@@ -605,6 +605,37 @@ class $DevicesTable extends Devices with TableInfo<$DevicesTable, Device> {
         requiredDuringInsert: false,
         defaultValue: const Constant('[]'),
       );
+  static const VerificationMeta _discoveredNameMeta = const VerificationMeta(
+    'discoveredName',
+  );
+  @override
+  late final GeneratedColumn<String> discoveredName = GeneratedColumn<String>(
+    'discovered_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _webPortMeta = const VerificationMeta(
+    'webPort',
+  );
+  @override
+  late final GeneratedColumn<int> webPort = GeneratedColumn<int>(
+    'web_port',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _customNameMeta = const VerificationMeta(
     'customName',
   );
@@ -740,6 +771,9 @@ class $DevicesTable extends Devices with TableInfo<$DevicesTable, Device> {
     confidence,
     osConfidence,
     inferenceReasonsJson,
+    discoveredName,
+    model,
+    webPort,
     customName,
     customDeviceType,
     note,
@@ -841,6 +875,27 @@ class $DevicesTable extends Devices with TableInfo<$DevicesTable, Device> {
           data['inference_reasons_json']!,
           _inferenceReasonsJsonMeta,
         ),
+      );
+    }
+    if (data.containsKey('discovered_name')) {
+      context.handle(
+        _discoveredNameMeta,
+        discoveredName.isAcceptableOrUnknown(
+          data['discovered_name']!,
+          _discoveredNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('web_port')) {
+      context.handle(
+        _webPortMeta,
+        webPort.isAcceptableOrUnknown(data['web_port']!, _webPortMeta),
       );
     }
     if (data.containsKey('custom_name')) {
@@ -977,6 +1032,18 @@ class $DevicesTable extends Devices with TableInfo<$DevicesTable, Device> {
         DriftSqlType.string,
         data['${effectivePrefix}inference_reasons_json'],
       )!,
+      discoveredName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}discovered_name'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      webPort: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}web_port'],
+      ),
       customName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}custom_name'],
@@ -1043,6 +1110,16 @@ class Device extends DataClass implements Insertable<Device> {
 
   /// Human-readable reasons behind the current inference (schema v3).
   final String inferenceReasonsJson;
+
+  /// Name the device announces itself (UPnP friendlyName, mDNS/Bonjour
+  /// instance name) — schema v5.
+  final String? discoveredName;
+
+  /// Model from UPnP/mDNS/web interface (schema v5).
+  final String? model;
+
+  /// Port of the device's web interface, if any (schema v5).
+  final int? webPort;
   final String? customName;
   final String? customDeviceType;
   final String? note;
@@ -1073,6 +1150,9 @@ class Device extends DataClass implements Insertable<Device> {
     required this.confidence,
     this.osConfidence,
     required this.inferenceReasonsJson,
+    this.discoveredName,
+    this.model,
+    this.webPort,
     this.customName,
     this.customDeviceType,
     this.note,
@@ -1108,6 +1188,15 @@ class Device extends DataClass implements Insertable<Device> {
       map['os_confidence'] = Variable<String>(osConfidence);
     }
     map['inference_reasons_json'] = Variable<String>(inferenceReasonsJson);
+    if (!nullToAbsent || discoveredName != null) {
+      map['discovered_name'] = Variable<String>(discoveredName);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    if (!nullToAbsent || webPort != null) {
+      map['web_port'] = Variable<int>(webPort);
+    }
     if (!nullToAbsent || customName != null) {
       map['custom_name'] = Variable<String>(customName);
     }
@@ -1150,6 +1239,15 @@ class Device extends DataClass implements Insertable<Device> {
           ? const Value.absent()
           : Value(osConfidence),
       inferenceReasonsJson: Value(inferenceReasonsJson),
+      discoveredName: discoveredName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discoveredName),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      webPort: webPort == null && nullToAbsent
+          ? const Value.absent()
+          : Value(webPort),
       customName: customName == null && nullToAbsent
           ? const Value.absent()
           : Value(customName),
@@ -1186,6 +1284,9 @@ class Device extends DataClass implements Insertable<Device> {
       inferenceReasonsJson: serializer.fromJson<String>(
         json['inferenceReasonsJson'],
       ),
+      discoveredName: serializer.fromJson<String?>(json['discoveredName']),
+      model: serializer.fromJson<String?>(json['model']),
+      webPort: serializer.fromJson<int?>(json['webPort']),
       customName: serializer.fromJson<String?>(json['customName']),
       customDeviceType: serializer.fromJson<String?>(json['customDeviceType']),
       note: serializer.fromJson<String?>(json['note']),
@@ -1213,6 +1314,9 @@ class Device extends DataClass implements Insertable<Device> {
       'confidence': serializer.toJson<String>(confidence),
       'osConfidence': serializer.toJson<String?>(osConfidence),
       'inferenceReasonsJson': serializer.toJson<String>(inferenceReasonsJson),
+      'discoveredName': serializer.toJson<String?>(discoveredName),
+      'model': serializer.toJson<String?>(model),
+      'webPort': serializer.toJson<int?>(webPort),
       'customName': serializer.toJson<String?>(customName),
       'customDeviceType': serializer.toJson<String?>(customDeviceType),
       'note': serializer.toJson<String?>(note),
@@ -1238,6 +1342,9 @@ class Device extends DataClass implements Insertable<Device> {
     String? confidence,
     Value<String?> osConfidence = const Value.absent(),
     String? inferenceReasonsJson,
+    Value<String?> discoveredName = const Value.absent(),
+    Value<String?> model = const Value.absent(),
+    Value<int?> webPort = const Value.absent(),
     Value<String?> customName = const Value.absent(),
     Value<String?> customDeviceType = const Value.absent(),
     Value<String?> note = const Value.absent(),
@@ -1260,6 +1367,11 @@ class Device extends DataClass implements Insertable<Device> {
     confidence: confidence ?? this.confidence,
     osConfidence: osConfidence.present ? osConfidence.value : this.osConfidence,
     inferenceReasonsJson: inferenceReasonsJson ?? this.inferenceReasonsJson,
+    discoveredName: discoveredName.present
+        ? discoveredName.value
+        : this.discoveredName,
+    model: model.present ? model.value : this.model,
+    webPort: webPort.present ? webPort.value : this.webPort,
     customName: customName.present ? customName.value : this.customName,
     customDeviceType: customDeviceType.present
         ? customDeviceType.value
@@ -1298,6 +1410,11 @@ class Device extends DataClass implements Insertable<Device> {
       inferenceReasonsJson: data.inferenceReasonsJson.present
           ? data.inferenceReasonsJson.value
           : this.inferenceReasonsJson,
+      discoveredName: data.discoveredName.present
+          ? data.discoveredName.value
+          : this.discoveredName,
+      model: data.model.present ? data.model.value : this.model,
+      webPort: data.webPort.present ? data.webPort.value : this.webPort,
       customName: data.customName.present
           ? data.customName.value
           : this.customName,
@@ -1337,6 +1454,9 @@ class Device extends DataClass implements Insertable<Device> {
           ..write('confidence: $confidence, ')
           ..write('osConfidence: $osConfidence, ')
           ..write('inferenceReasonsJson: $inferenceReasonsJson, ')
+          ..write('discoveredName: $discoveredName, ')
+          ..write('model: $model, ')
+          ..write('webPort: $webPort, ')
           ..write('customName: $customName, ')
           ..write('customDeviceType: $customDeviceType, ')
           ..write('note: $note, ')
@@ -1364,6 +1484,9 @@ class Device extends DataClass implements Insertable<Device> {
     confidence,
     osConfidence,
     inferenceReasonsJson,
+    discoveredName,
+    model,
+    webPort,
     customName,
     customDeviceType,
     note,
@@ -1390,6 +1513,9 @@ class Device extends DataClass implements Insertable<Device> {
           other.confidence == this.confidence &&
           other.osConfidence == this.osConfidence &&
           other.inferenceReasonsJson == this.inferenceReasonsJson &&
+          other.discoveredName == this.discoveredName &&
+          other.model == this.model &&
+          other.webPort == this.webPort &&
           other.customName == this.customName &&
           other.customDeviceType == this.customDeviceType &&
           other.note == this.note &&
@@ -1414,6 +1540,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
   final Value<String> confidence;
   final Value<String?> osConfidence;
   final Value<String> inferenceReasonsJson;
+  final Value<String?> discoveredName;
+  final Value<String?> model;
+  final Value<int?> webPort;
   final Value<String?> customName;
   final Value<String?> customDeviceType;
   final Value<String?> note;
@@ -1436,6 +1565,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
     this.confidence = const Value.absent(),
     this.osConfidence = const Value.absent(),
     this.inferenceReasonsJson = const Value.absent(),
+    this.discoveredName = const Value.absent(),
+    this.model = const Value.absent(),
+    this.webPort = const Value.absent(),
     this.customName = const Value.absent(),
     this.customDeviceType = const Value.absent(),
     this.note = const Value.absent(),
@@ -1459,6 +1591,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
     required String confidence,
     this.osConfidence = const Value.absent(),
     this.inferenceReasonsJson = const Value.absent(),
+    this.discoveredName = const Value.absent(),
+    this.model = const Value.absent(),
+    this.webPort = const Value.absent(),
     this.customName = const Value.absent(),
     this.customDeviceType = const Value.absent(),
     this.note = const Value.absent(),
@@ -1488,6 +1623,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
     Expression<String>? confidence,
     Expression<String>? osConfidence,
     Expression<String>? inferenceReasonsJson,
+    Expression<String>? discoveredName,
+    Expression<String>? model,
+    Expression<int>? webPort,
     Expression<String>? customName,
     Expression<String>? customDeviceType,
     Expression<String>? note,
@@ -1512,6 +1650,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
       if (osConfidence != null) 'os_confidence': osConfidence,
       if (inferenceReasonsJson != null)
         'inference_reasons_json': inferenceReasonsJson,
+      if (discoveredName != null) 'discovered_name': discoveredName,
+      if (model != null) 'model': model,
+      if (webPort != null) 'web_port': webPort,
       if (customName != null) 'custom_name': customName,
       if (customDeviceType != null) 'custom_type': customDeviceType,
       if (note != null) 'note': note,
@@ -1537,6 +1678,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
     Value<String>? confidence,
     Value<String?>? osConfidence,
     Value<String>? inferenceReasonsJson,
+    Value<String?>? discoveredName,
+    Value<String?>? model,
+    Value<int?>? webPort,
     Value<String?>? customName,
     Value<String?>? customDeviceType,
     Value<String?>? note,
@@ -1560,6 +1704,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
       confidence: confidence ?? this.confidence,
       osConfidence: osConfidence ?? this.osConfidence,
       inferenceReasonsJson: inferenceReasonsJson ?? this.inferenceReasonsJson,
+      discoveredName: discoveredName ?? this.discoveredName,
+      model: model ?? this.model,
+      webPort: webPort ?? this.webPort,
       customName: customName ?? this.customName,
       customDeviceType: customDeviceType ?? this.customDeviceType,
       note: note ?? this.note,
@@ -1611,6 +1758,15 @@ class DevicesCompanion extends UpdateCompanion<Device> {
         inferenceReasonsJson.value,
       );
     }
+    if (discoveredName.present) {
+      map['discovered_name'] = Variable<String>(discoveredName.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (webPort.present) {
+      map['web_port'] = Variable<int>(webPort.value);
+    }
     if (customName.present) {
       map['custom_name'] = Variable<String>(customName.value);
     }
@@ -1658,6 +1814,9 @@ class DevicesCompanion extends UpdateCompanion<Device> {
           ..write('confidence: $confidence, ')
           ..write('osConfidence: $osConfidence, ')
           ..write('inferenceReasonsJson: $inferenceReasonsJson, ')
+          ..write('discoveredName: $discoveredName, ')
+          ..write('model: $model, ')
+          ..write('webPort: $webPort, ')
           ..write('customName: $customName, ')
           ..write('customDeviceType: $customDeviceType, ')
           ..write('note: $note, ')
@@ -3869,6 +4028,9 @@ typedef $$DevicesTableCreateCompanionBuilder =
       required String confidence,
       Value<String?> osConfidence,
       Value<String> inferenceReasonsJson,
+      Value<String?> discoveredName,
+      Value<String?> model,
+      Value<int?> webPort,
       Value<String?> customName,
       Value<String?> customDeviceType,
       Value<String?> note,
@@ -3893,6 +4055,9 @@ typedef $$DevicesTableUpdateCompanionBuilder =
       Value<String> confidence,
       Value<String?> osConfidence,
       Value<String> inferenceReasonsJson,
+      Value<String?> discoveredName,
+      Value<String?> model,
+      Value<int?> webPort,
       Value<String?> customName,
       Value<String?> customDeviceType,
       Value<String?> note,
@@ -4025,6 +4190,21 @@ class $$DevicesTableFilterComposer
 
   ColumnFilters<String> get inferenceReasonsJson => $composableBuilder(
     column: $table.inferenceReasonsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get discoveredName => $composableBuilder(
+    column: $table.discoveredName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get webPort => $composableBuilder(
+    column: $table.webPort,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4211,6 +4391,21 @@ class $$DevicesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get discoveredName => $composableBuilder(
+    column: $table.discoveredName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get webPort => $composableBuilder(
+    column: $table.webPort,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get customName => $composableBuilder(
     column: $table.customName,
     builder: (column) => ColumnOrderings(column),
@@ -4335,6 +4530,17 @@ class $$DevicesTableAnnotationComposer
     column: $table.inferenceReasonsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get discoveredName => $composableBuilder(
+    column: $table.discoveredName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<int> get webPort =>
+      $composableBuilder(column: $table.webPort, builder: (column) => column);
 
   GeneratedColumn<String> get customName => $composableBuilder(
     column: $table.customName,
@@ -4496,6 +4702,9 @@ class $$DevicesTableTableManager
                 Value<String> confidence = const Value.absent(),
                 Value<String?> osConfidence = const Value.absent(),
                 Value<String> inferenceReasonsJson = const Value.absent(),
+                Value<String?> discoveredName = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<int?> webPort = const Value.absent(),
                 Value<String?> customName = const Value.absent(),
                 Value<String?> customDeviceType = const Value.absent(),
                 Value<String?> note = const Value.absent(),
@@ -4518,6 +4727,9 @@ class $$DevicesTableTableManager
                 confidence: confidence,
                 osConfidence: osConfidence,
                 inferenceReasonsJson: inferenceReasonsJson,
+                discoveredName: discoveredName,
+                model: model,
+                webPort: webPort,
                 customName: customName,
                 customDeviceType: customDeviceType,
                 note: note,
@@ -4542,6 +4754,9 @@ class $$DevicesTableTableManager
                 required String confidence,
                 Value<String?> osConfidence = const Value.absent(),
                 Value<String> inferenceReasonsJson = const Value.absent(),
+                Value<String?> discoveredName = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<int?> webPort = const Value.absent(),
                 Value<String?> customName = const Value.absent(),
                 Value<String?> customDeviceType = const Value.absent(),
                 Value<String?> note = const Value.absent(),
@@ -4564,6 +4779,9 @@ class $$DevicesTableTableManager
                 confidence: confidence,
                 osConfidence: osConfidence,
                 inferenceReasonsJson: inferenceReasonsJson,
+                discoveredName: discoveredName,
+                model: model,
+                webPort: webPort,
                 customName: customName,
                 customDeviceType: customDeviceType,
                 note: note,

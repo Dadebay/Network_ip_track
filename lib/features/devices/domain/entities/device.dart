@@ -20,6 +20,9 @@ class Device {
     required this.status,
     this.macAddress,
     this.hostname,
+    this.discoveredName,
+    this.model,
+    this.webPort,
     this.vendor,
     this.inferredOs,
     this.osConfidence,
@@ -36,6 +39,13 @@ class Device {
   final String? macAddress;
   final Ipv4Address currentIp;
   final String? hostname;
+
+  /// Name the device announces itself (UPnP/mDNS), e.g. "Salon TV".
+  final String? discoveredName;
+  final String? model;
+
+  /// Port of the device's web interface, when it has one.
+  final int? webPort;
   final String? vendor;
   final DeviceType inferredType;
   final String? inferredOs;
@@ -68,8 +78,10 @@ class Device {
   final DeviceStatus status;
 
   /// What the tree/list should show as the device's name: the user's own
-  /// name first, then hostname, then the raw IP as a last resort.
-  String get displayName => customName ?? shortHostname ?? currentIp.toString();
+  /// name first, then the name the device announces, then its hostname,
+  /// and the raw IP as a last resort.
+  String get displayName =>
+      customName ?? discoveredName ?? shortHostname ?? currentIp.toString();
 
   /// [hostname] without the mDNS `.local` suffix, which adds nothing on a
   /// LAN and pushes long serial-number names (e.g. IP cameras) off-screen.
@@ -77,7 +89,20 @@ class Device {
       hostname?.replaceFirst(RegExp(r'\.local\.?$', caseSensitive: false), '');
 
   /// Whether a name beyond the bare IP is known.
-  bool get hasName => customName != null || hostname != null;
+  bool get hasName =>
+      customName != null || discoveredName != null || hostname != null;
+
+  /// `http(s)://ip[:port]` of the device's web interface.
+  Uri? get webUri {
+    final port = webPort;
+    if (port == null) return null;
+    final https = port == 443 || port == 8443;
+    return Uri(
+      scheme: https ? 'https' : 'http',
+      host: currentIp.toString(),
+      port: port == 80 || port == 443 ? null : port,
+    );
+  }
 
   /// The user's type when set, otherwise the inferred one — used for
   /// grouping, filtering and icons.

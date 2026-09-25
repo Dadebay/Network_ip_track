@@ -38,10 +38,14 @@ class DeviceTreeView extends ConsumerStatefulWidget {
     required this.roots,
     required this.onDeviceSelected,
     this.forceExpandAll = false,
+    this.newDeviceIds = const {},
   });
 
   final List<DeviceTreeNode> roots;
   final ValueChanged<Device> onDeviceSelected;
+
+  /// Devices to mark "Yeni".
+  final Set<int> newDeviceIds;
 
   /// True while a search/filter is active: the device list feeding [roots]
   /// is already filtered, so every remaining group is forced open instead
@@ -181,6 +185,7 @@ class _DeviceTreeViewState extends ConsumerState<DeviceTreeView> {
               selected: device != null && device.id == selectedId,
               focused: row.node.id == _focusedId,
               traffic: traffic,
+              isNew: device != null && widget.newDeviceIds.contains(device.id),
               onTap: () {
                 _focusNode.requestFocus();
                 setState(() => _focusedId = row.node.id);
@@ -204,6 +209,7 @@ class _TreeRow extends StatelessWidget {
     required this.selected,
     required this.focused,
     required this.traffic,
+    required this.isNew,
     required this.onTap,
     required this.onToggle,
   });
@@ -212,6 +218,7 @@ class _TreeRow extends StatelessWidget {
   final bool selected;
   final bool focused;
   final TodayTrafficTotals? traffic;
+  final bool isNew;
   final VoidCallback onTap;
   final VoidCallback onToggle;
 
@@ -249,6 +256,7 @@ class _TreeRow extends StatelessWidget {
             selected: selected,
             focused: focused,
             traffic: traffic,
+            isNew: isNew,
             onTap: onTap,
           ),
         },
@@ -659,6 +667,7 @@ class _DeviceRow extends StatelessWidget {
     required this.selected,
     required this.focused,
     required this.traffic,
+    required this.isNew,
     required this.onTap,
   });
 
@@ -667,13 +676,19 @@ class _DeviceRow extends StatelessWidget {
   final bool selected;
   final bool focused;
   final TodayTrafficTotals? traffic;
+  final bool isNew;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final secondary = device.vendor ?? deviceOsWithConfidence(device);
+    final model = device.model;
+    final secondary = model == null
+        ? device.vendor ?? deviceOsWithConfidence(device)
+        : device.vendor == null || model.contains(device.vendor!)
+        ? model
+        : '$model · ${device.vendor}';
 
     return _RowChrome(
       depth: row.depth,
@@ -707,23 +722,33 @@ class _DeviceRow extends StatelessWidget {
                   // The IP always has its own column, so an unnamed device
                   // shows a muted placeholder rather than the IP in the
                   // name column and a gap where the IP should be.
-                  child: device.hasName
-                      ? Text(
-                          device.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        )
-                      : Text(
-                          'Adsız',
-                          maxLines: 1,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: scheme.outline,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: device.hasName
+                            ? Text(
+                                device.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              )
+                            : Text(
+                                'Adsız',
+                                maxLines: 1,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: scheme.outline,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                      ),
+                      if (isNew) ...[
+                        const SizedBox(width: 6),
+                        const NewDeviceBadge(),
+                      ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -752,11 +777,19 @@ class _DeviceRow extends StatelessWidget {
                 ),
               ] else
                 const Spacer(),
-              if (!veryNarrow)
+              // Wide rows keep an (empty) slot so columns stay aligned;
+              // narrow ones only spend the width when there's a button.
+              if (!narrow || (!veryNarrow && device.webUri != null))
+                OpenWebUiButton(device: device),
+              // Without a traffic source every row would just say "Veri
+              // yok"; the column only appears once there is data to show.
+              if (!veryNarrow && traffic != null)
                 Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(left: 4, right: 12),
                   child: _TrafficLabel(device: device, traffic: traffic),
-                ),
+                )
+              else if (!veryNarrow)
+                const SizedBox(width: 8),
             ],
           );
         },

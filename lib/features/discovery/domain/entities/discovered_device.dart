@@ -1,6 +1,7 @@
 import '../../../../core/utils/ipv4_address.dart';
 import '../repositories/http_banner_provider.dart';
 import 'mdns_service_record.dart';
+import 'upnp_device_info.dart';
 
 /// One host's accumulated discovery signals for a single scan pass, streamed
 /// to the UI/repository as soon as it's known — the pipeline enriches this
@@ -15,6 +16,7 @@ class DiscoveredDevice {
     this.netbiosName,
     this.ttl,
     this.httpBanner,
+    this.upnp,
     this.mdnsRecords = const [],
     this.ssdpServices = const [],
     this.openPorts = const [],
@@ -37,6 +39,9 @@ class DiscoveredDevice {
 
   /// What the device's web interface says about itself, if it has one.
   final HttpBanner? httpBanner;
+
+  /// What the device's UPnP description (from its SSDP reply) says.
+  final UpnpDeviceInfo? upnp;
 
   final List<MdnsServiceRecord> mdnsRecords;
   final List<String> ssdpServices;
@@ -61,6 +66,7 @@ class DiscoveredDevice {
       netbiosName: other.netbiosName ?? netbiosName,
       ttl: other.ttl ?? ttl,
       httpBanner: other.httpBanner ?? httpBanner,
+      upnp: other.upnp ?? upnp,
       mdnsRecords: [...mdnsRecords, ...other.mdnsRecords],
       ssdpServices: {...ssdpServices, ...other.ssdpServices}.toList(),
       openPorts: {...openPorts, ...other.openPorts}.toList(),

@@ -6,6 +6,7 @@ import Security
 class MainFlutterWindow: NSWindow {
   private var keychainChannel: KeychainChannel?
   private var icmpChannel: IcmpChannel?
+  private var workspaceChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -18,6 +19,21 @@ class MainFlutterWindow: NSWindow {
       messenger: flutterViewController.engine.binaryMessenger)
     icmpChannel = IcmpChannel(
       messenger: flutterViewController.engine.binaryMessenger)
+    workspaceChannel = FlutterMethodChannel(
+      name: "network_monitor/workspace",
+      binaryMessenger: flutterViewController.engine.binaryMessenger)
+    workspaceChannel?.setMethodCallHandler { call, result in
+      // Only a device's own web UI is ever opened: plain http(s) URLs.
+      guard call.method == "openUrl",
+        let text = call.arguments as? String,
+        let url = URL(string: text),
+        url.scheme == "http" || url.scheme == "https"
+      else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      result(NSWorkspace.shared.open(url))
+    }
 
     super.awakeFromNib()
   }

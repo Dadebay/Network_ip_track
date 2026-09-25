@@ -20,6 +20,16 @@ class Devices extends Table {
   /// Human-readable reasons behind the current inference (schema v3).
   TextColumn get inferenceReasonsJson =>
       text().withDefault(const Constant('[]'))();
+
+  /// Name the device announces itself (UPnP friendlyName, mDNS/Bonjour
+  /// instance name) — schema v5.
+  TextColumn get discoveredName => text().nullable()();
+
+  /// Model from UPnP/mDNS/web interface (schema v5).
+  TextColumn get model => text().nullable()();
+
+  /// Port of the device's web interface, if any (schema v5).
+  IntColumn get webPort => integer().nullable()();
   TextColumn get customName => text().nullable()();
   // Named explicitly: `customType` collides with drift's own
   // `Table.customType()` API, so the Dart getter must differ from the spec's

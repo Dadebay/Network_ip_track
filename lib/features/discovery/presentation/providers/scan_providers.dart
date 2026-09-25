@@ -22,6 +22,7 @@ import '../../domain/entities/scan_session_status.dart';
 import '../../domain/entities/scan_settings.dart';
 import '../../domain/repositories/arp_table_provider.dart';
 import '../../domain/repositories/http_banner_provider.dart';
+import '../../domain/repositories/upnp_description_provider.dart';
 import '../../domain/repositories/mdns_provider.dart';
 import '../../domain/repositories/netbios_provider.dart';
 import '../../domain/repositories/network_diagnostics.dart';
@@ -34,6 +35,7 @@ import '../../domain/repositories/ssdp_provider.dart';
 import '../../infrastructure/drift_scan_session_repository.dart';
 import '../../infrastructure/macos/macos_arp_table_provider.dart';
 import '../../infrastructure/http/io_http_banner_provider.dart';
+import '../../infrastructure/http/io_upnp_description_provider.dart';
 import '../../infrastructure/macos/macos_mdns_provider.dart';
 import '../../infrastructure/macos/macos_network_diagnostics.dart';
 import '../../infrastructure/macos/native_icmp_ping_provider.dart';
@@ -69,6 +71,9 @@ final networkDiagnosticsProvider = Provider<NetworkDiagnostics>(
 final httpBannerAdapterProvider = Provider<HttpBannerProvider>(
   (ref) => const IoHttpBannerProvider(),
 );
+final upnpDescriptionAdapterProvider = Provider<UpnpDescriptionProvider>(
+  (ref) => const IoUpnpDescriptionProvider(),
+);
 final netbiosAdapterProvider = Provider<NetbiosProvider>(
   (ref) => UdpNetbiosProvider(),
 );
@@ -93,6 +98,7 @@ final scanCoordinatorProvider = Provider<ScanCoordinator>((ref) {
       portProbe: ref.watch(portProbeAdapterProvider),
       netbios: ref.watch(netbiosAdapterProvider),
       httpBanner: ref.watch(httpBannerAdapterProvider),
+      upnpDescription: ref.watch(upnpDescriptionAdapterProvider),
     ),
     sessions: ref.watch(scanSessionRepositoryProvider),
     devices: ref.watch(deviceRepositoryProvider),

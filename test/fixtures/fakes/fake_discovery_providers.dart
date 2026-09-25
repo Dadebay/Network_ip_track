@@ -5,6 +5,8 @@ import 'package:network_monitor/features/classification/domain/repositories/oui_
 import 'package:network_monitor/features/discovery/domain/entities/arp_entry.dart';
 import 'package:network_monitor/features/discovery/domain/entities/mdns_service_record.dart';
 import 'package:network_monitor/features/discovery/domain/entities/ping_reply.dart';
+import 'package:network_monitor/features/discovery/domain/entities/ssdp_response.dart';
+import 'package:network_monitor/features/discovery/domain/entities/upnp_device_info.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/arp_table_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/mdns_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/netbios_provider.dart';
@@ -12,6 +14,7 @@ import 'package:network_monitor/features/discovery/domain/repositories/ping_prov
 import 'package:network_monitor/features/discovery/domain/repositories/port_probe_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/reverse_dns_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/ssdp_provider.dart';
+import 'package:network_monitor/features/discovery/domain/repositories/upnp_description_provider.dart';
 
 /// In-memory stand-ins for every discovery adapter, so engine/coordinator
 /// tests never touch the real network.
@@ -114,10 +117,10 @@ class FakeOuiLookup implements OuiLookup {
 
 class FakeSsdpProvider implements SsdpProvider {
   FakeSsdpProvider([this.services = const {}]);
-  final Map<Ipv4Address, List<String>> services;
+  final Map<Ipv4Address, List<SsdpResponse>> services;
 
   @override
-  Future<Map<Ipv4Address, List<String>>> search({
+  Future<Map<Ipv4Address, List<SsdpResponse>>> search({
     required Duration timeout,
   }) async => services;
 }
@@ -135,4 +138,16 @@ class FakePortProbeProvider implements PortProbeProvider {
     for (final port in open[address] ?? const <int>[])
       if (ports.contains(port)) port,
   ];
+}
+
+class FakeUpnpDescriptionProvider implements UpnpDescriptionProvider {
+  FakeUpnpDescriptionProvider([this.byLocation = const {}]);
+  final Map<String, UpnpDeviceInfo> byLocation;
+
+  @override
+  Future<UpnpDeviceInfo?> fetch(
+    Ipv4Address address,
+    String location, {
+    required Duration timeout,
+  }) async => byLocation[location];
 }

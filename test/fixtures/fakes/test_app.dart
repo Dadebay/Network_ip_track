@@ -40,6 +40,9 @@ Widget buildTestApp({
       ),
       mdnsAdapterProvider.overrideWithValue(mdns ?? FakeMdnsProvider()),
       ssdpAdapterProvider.overrideWithValue(FakeSsdpProvider()),
+      upnpDescriptionAdapterProvider.overrideWithValue(
+        FakeUpnpDescriptionProvider(),
+      ),
       portProbeAdapterProvider.overrideWithValue(
         ports ?? FakePortProbeProvider(),
       ),

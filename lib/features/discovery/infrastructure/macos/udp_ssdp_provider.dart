@@ -15,10 +15,10 @@ class UdpSsdpProvider implements SsdpProvider {
   const UdpSsdpProvider();
 
   @override
-  Future<Map<Ipv4Address, List<String>>> search({
+  Future<Map<Ipv4Address, List<SsdpResponse>>> search({
     required Duration timeout,
   }) async {
-    final result = <Ipv4Address, List<String>>{};
+    final result = <Ipv4Address, List<SsdpResponse>>{};
     RawDatagramSocket? socket;
     try {
       socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
@@ -46,7 +46,7 @@ class UdpSsdpProvider implements SsdpProvider {
         );
         if (response.isEmpty) return;
 
-        (result[address] ??= []).add(response.describe());
+        (result[address] ??= []).add(response);
       });
 
       await Future<void>.delayed(timeout);

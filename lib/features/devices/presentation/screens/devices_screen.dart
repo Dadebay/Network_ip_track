@@ -18,6 +18,7 @@ import '../widgets/device_detail_panel.dart';
 import '../widgets/device_table.dart';
 import '../widgets/device_toolbar.dart';
 import '../widgets/device_tree_view.dart';
+import '../widgets/device_visuals.dart';
 
 /// Main view: the discovered devices of the active network as a tree or a
 /// list, updating live while a scan streams results in.
@@ -92,6 +93,7 @@ class _DevicesBody extends ConsumerWidget {
               key: value.totalBytes,
           },
         );
+        final newIds = newDeviceIds(devices);
         final subnets =
             <Cidr>{
                 for (final subnet in network.snapshot.accessibleSubnets)
@@ -129,10 +131,12 @@ class _DevicesBody extends ConsumerWidget {
                         activeSubnet: network.snapshot.activeInterface?.cidr,
                       ),
                       forceExpandAll: query.hasFilters,
+                      newDeviceIds: newIds,
                       onDeviceSelected: select,
                     ),
                     DeviceViewMode.list => DeviceTable(
                       devices: visible,
+                      newDeviceIds: newIds,
                       onDeviceSelected: select,
                     ),
                   };

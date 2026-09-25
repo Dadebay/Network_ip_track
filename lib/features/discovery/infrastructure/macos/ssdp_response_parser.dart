@@ -1,18 +1,6 @@
-/// A parsed SSDP `M-SEARCH` response's classification-relevant headers.
-class SsdpResponse {
-  const SsdpResponse({this.server, this.st, this.location});
-  final String? server;
-  final String? st;
-  final String? location;
+import '../../domain/entities/ssdp_response.dart';
 
-  bool get isEmpty => server == null && st == null && location == null;
-
-  /// Human-readable one-line summary for [DiscoveredDevice.ssdpServices].
-  String describe() {
-    final parts = [?server, if (st != null) 'ST: $st'];
-    return parts.isEmpty ? 'SSDP yanıtı' : parts.join(' · ');
-  }
-}
+export '../../domain/entities/ssdp_response.dart';
 
 /// Parses one SSDP HTTP-like response datagram. Pure and fixture-testable.
 SsdpResponse parseSsdpResponse(String raw) {

@@ -14,6 +14,8 @@ import '../domain/entities/scan_chunk_status.dart';
 import '../domain/entities/scan_session_status.dart';
 import '../domain/entities/scan_settings.dart';
 import '../domain/entities/scan_stage.dart';
+import '../domain/entities/ssdp_response.dart';
+import '../domain/entities/upnp_device_info.dart';
 import '../domain/repositories/arp_table_provider.dart';
 import '../domain/repositories/http_banner_provider.dart';
 import '../domain/repositories/mdns_provider.dart';
@@ -22,6 +24,7 @@ import '../domain/repositories/ping_provider.dart';
 import '../domain/repositories/port_probe_provider.dart';
 import '../domain/repositories/reverse_dns_provider.dart';
 import '../domain/repositories/ssdp_provider.dart';
+import '../domain/repositories/upnp_description_provider.dart';
 import 'scan_control.dart';
 
 /// Something the engine reports while running.
@@ -93,6 +96,7 @@ class ScanEngine {
     required PortProbeProvider portProbe,
     required NetbiosProvider netbios,
     HttpBannerProvider? httpBanner,
+    UpnpDescriptionProvider? upnpDescription,
     this.mdnsWindow = const Duration(seconds: 4),
     this.ssdpWindow = const Duration(seconds: 3),
     this.progressInterval = const Duration(milliseconds: 250),
@@ -105,6 +109,7 @@ class ScanEngine {
        _portProbe = portProbe,
        _netbios = netbios,
        _httpBanner = httpBanner,
+       _upnpDescription = upnpDescription,
        _clock = clock ?? DateTime.now;
 
   final ArpTableProvider _arpTable;
@@ -115,6 +120,7 @@ class ScanEngine {
   final PortProbeProvider _portProbe;
   final NetbiosProvider _netbios;
   final HttpBannerProvider? _httpBanner;
+  final UpnpDescriptionProvider? _upnpDescription;
 
   /// Web ports whose front page is read for classification, in preference
   /// order; only ones the limited port check found open are tried.
@@ -189,7 +195,7 @@ class _ScanRun {
   ScanStage stage = ScanStage.gatheringCandidates;
   Map<Ipv4Address, ArpEntry> _arpByIp = const {};
   Map<Ipv4Address, List<MdnsServiceRecord>> _mdnsByIp = const {};
-  Map<Ipv4Address, List<String>> _ssdpByIp = const {};
+  Map<Ipv4Address, List<SsdpResponse>> _ssdpByIp = const {};
   DateTime _lastProgressAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   bool _uses(DiscoveryMethod method) => settings.methods.contains(method);
@@ -284,7 +290,7 @@ class _ScanRun {
           : Future.value(const <Ipv4Address, List<MdnsServiceRecord>>{}),
       _uses(DiscoveryMethod.ssdp)
           ? listen(() => engine._ssdp.search(timeout: engine.ssdpWindow))
-          : Future.value(const <Ipv4Address, List<String>>{}),
+          : Future.value(const <Ipv4Address, List<SsdpResponse>>{}),
     ]);
 
     final arpEntries = results[0] as List<ArpEntry>;
@@ -295,7 +301,7 @@ class _ScanRun {
           entry.ipAddress: entry,
     };
     _mdnsByIp = results[1] as Map<Ipv4Address, List<MdnsServiceRecord>>;
-    _ssdpByIp = results[2] as Map<Ipv4Address, List<String>>;
+    _ssdpByIp = results[2] as Map<Ipv4Address, List<SsdpResponse>>;
   }
 
   Future<void> _probeCandidates() async {
@@ -463,7 +469,10 @@ class _ScanRun {
     if (arpEntry != null) alive = true;
 
     final mdnsRecords = _mdnsByIp[address] ?? const <MdnsServiceRecord>[];
-    final ssdpServices = _ssdpByIp[address] ?? const [];
+    final ssdpResponses = _ssdpByIp[address] ?? const <SsdpResponse>[];
+    final ssdpServices = {
+      for (final response in ssdpResponses) response.describe(),
+    }.toList();
     if (mdnsRecords.isNotEmpty) {
       alive = true;
       signals.add('mDNS/Bonjour yanıtı');
@@ -532,10 +541,27 @@ class _ScanRun {
       }
     }
 
+    UpnpDeviceInfo? upnp;
+    final upnpProvider = engine._upnpDescription;
+    if (upnpProvider != null && !control.isStopRequested) {
+      final locations = {
+        for (final response in ssdpResponses) ?response.location,
+      };
+      for (final location in locations.take(2)) {
+        upnp = await upnpProvider.fetch(
+          address,
+          location,
+          timeout: settings.portProbeTimeout * 4,
+        );
+        if (upnp != null) break;
+      }
+    }
+
     return DiscoveredDevice(
       ipAddress: address,
       respondedAt: engine._clock(),
       httpBanner: banner,
+      upnp: upnp,
       macAddress: arpEntry?.macAddress,
       hostname: hostname ?? netbiosName,
       netbiosName: netbiosName,

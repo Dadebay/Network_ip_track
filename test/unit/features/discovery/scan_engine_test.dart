@@ -12,6 +12,8 @@ import 'package:network_monitor/features/discovery/domain/entities/scan_chunk_st
 import 'package:network_monitor/features/discovery/domain/entities/scan_scope_type.dart';
 import 'package:network_monitor/features/discovery/domain/entities/scan_session_status.dart';
 import 'package:network_monitor/features/discovery/domain/entities/scan_settings.dart';
+import 'package:network_monitor/features/discovery/domain/entities/ssdp_response.dart';
+import 'package:network_monitor/features/discovery/domain/entities/upnp_device_info.dart';
 
 import '../../../fixtures/fakes/fake_discovery_providers.dart';
 
@@ -40,14 +42,17 @@ ScanEngine engineWith({
   FakeReverseDnsProvider? dns,
   FakePortProbeProvider? ports,
   FakeNetbiosProvider? netbios,
+  FakeSsdpProvider? ssdp,
+  FakeUpnpDescriptionProvider? upnp,
 }) => ScanEngine(
   arpTable: arp ?? FakeArpTableProvider(),
   ping: ping ?? FakePingProvider(),
   reverseDns: dns ?? FakeReverseDnsProvider(),
   mdns: mdns ?? FakeMdnsProvider(),
-  ssdp: FakeSsdpProvider(),
+  ssdp: ssdp ?? FakeSsdpProvider(),
   portProbe: ports ?? FakePortProbeProvider(),
   netbios: netbios ?? FakeNetbiosProvider(),
+  upnpDescription: upnp,
   progressInterval: Duration.zero,
 );
 
@@ -342,6 +347,37 @@ void main() {
     expect(decoded.chunks.single.status, ScanChunkStatus.paused);
     expect(decoded.settings.limitedPorts, checkpoint.settings.limitedPorts);
     expect(decoded.settings.methods, checkpoint.settings.methods);
+  });
+
+  test('reads the UPnP description an SSDP reply points to', () async {
+    const location = 'http://172.16.14.21:5000/rootDesc.xml';
+    final events =
+        await engineWith(
+              ssdp: FakeSsdpProvider({
+                ip('172.16.14.21'): [
+                  const SsdpResponse(
+                    server: 'Linux UPnP/1.0',
+                    st: 'upnp:rootdevice',
+                    location: location,
+                  ),
+                ],
+              }),
+              upnp: FakeUpnpDescriptionProvider({
+                location: const UpnpDeviceInfo(
+                  friendlyName: 'Ofis Router',
+                  modelName: 'Xiaomi Router AX3000',
+                ),
+              }),
+            )
+            .run(
+              from: checkpointFor(['172.16.14.0/24']),
+              control: ScanControl(),
+            )
+            .toList();
+
+    final device = events.whereType<ScanHostFoundEvent>().single.device;
+    expect(device.upnp?.friendlyName, 'Ofis Router');
+    expect(device.ssdpServices, ['Linux UPnP/1.0 · ST: upnp:rootdevice']);
   });
 }
 

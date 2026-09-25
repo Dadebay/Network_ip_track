@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../../../core/database/app_database.dart' as db;
 import '../../../core/utils/cidr.dart';
 import '../../../core/utils/ipv4_address.dart';
+import '../../classification/application/device_identity.dart';
 import '../../classification/domain/entities/device_classification.dart';
 import '../../discovery/domain/entities/discovered_device.dart';
 import '../domain/entities/device.dart';
@@ -37,6 +38,7 @@ class DriftDeviceRepository implements DeviceRepository {
           ? null
           : classification.osConfidence;
       final pingedNow = discovered.signals.contains('ICMP yanıtı');
+      final identity = deriveDeviceIdentity(discovered);
 
       final existing = await _findExistingDevice(
         networkId: networkId,
@@ -54,6 +56,9 @@ class DriftDeviceRepository implements DeviceRepository {
                 macAddress: Value(mac),
                 currentIp: ipString,
                 hostname: Value(discovered.hostname),
+                discoveredName: Value(identity.name),
+                model: Value(identity.model),
+                webPort: Value(identity.webPort),
                 vendor: Value(vendor),
                 inferredType: classification.type.name,
                 confidence: classification.typeConfidence.name,
@@ -99,6 +104,15 @@ class DriftDeviceRepository implements DeviceRepository {
             hostname: discovered.hostname != null
                 ? Value(discovered.hostname)
                 : const Value.absent(),
+            discoveredName: identity.name != null
+                ? Value(identity.name)
+                : const Value.absent(),
+            model: identity.model != null
+                ? Value(identity.model)
+                : const Value.absent(),
+            webPort: identity.webPort != null
+                ? Value(identity.webPort)
+                : const Value.absent(),
             vendor: vendor != null ? Value(vendor) : const Value.absent(),
             inferredType: replaceType
                 ? Value(classification.type.name)
@@ -137,6 +151,7 @@ class DriftDeviceRepository implements DeviceRepository {
                   ...discovered.mdnsServices,
                   ...discovered.ssdpServices,
                   ?discovered.httpBanner?.describe(),
+                  ?discovered.upnp?.describe(),
                 ]),
               ),
               signalsJson: Value(
@@ -358,6 +373,9 @@ class DriftDeviceRepository implements DeviceRepository {
       macAddress: row.macAddress,
       currentIp: Ipv4Address.parse(row.currentIp),
       hostname: row.hostname,
+      discoveredName: row.discoveredName,
+      model: row.model,
+      webPort: row.webPort,
       vendor: row.vendor,
       inferredType: DeviceType.values.byName(row.inferredType),
       inferredOs: row.inferredOs,

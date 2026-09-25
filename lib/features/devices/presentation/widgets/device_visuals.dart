@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../../app/widgets/themed_huge_icon.dart';
@@ -96,9 +97,10 @@ String deviceOsWithConfidence(Device device) {
 
 /// Small tags: `Gateway`, `Bu Mac`.
 class DeviceTags extends StatelessWidget {
-  const DeviceTags({super.key, required this.device});
+  const DeviceTags({super.key, required this.device, this.isNew = false});
 
   final Device device;
+  final bool isNew;
 
   @override
   Widget build(BuildContext context) {
@@ -107,11 +109,12 @@ class DeviceTags extends StatelessWidget {
       if (device.isLocalDevice) 'Bu Mac',
       if (device.isKnown) 'Tanıdık',
     ];
-    if (tags.isEmpty) return const SizedBox.shrink();
+    if (tags.isEmpty && !isNew) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
     return Wrap(
       spacing: 4,
       children: [
+        if (isNew) const NewDeviceBadge(),
         for (final tag in tags)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -127,6 +130,94 @@ class DeviceTags extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Marks a device first seen recently, after the network's initial scan.
+class NewDeviceBadge extends StatelessWidget {
+  const NewDeviceBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: 'Son 24 saatte ilk kez görüldü',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          'Yeni',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.onPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Devices first seen within the last day, excluding everything the
+/// network's very first scan found — otherwise a fresh install would mark
+/// every device "Yeni".
+Set<int> newDeviceIds(List<Device> devices, {DateTime? now}) {
+  if (devices.isEmpty) return const {};
+  final current = now ?? DateTime.now();
+  final baseline = devices
+      .map((device) => device.firstSeenAt)
+      .reduce((a, b) => a.isBefore(b) ? a : b);
+  return {
+    for (final device in devices)
+      if (device.firstSeenAt.isAfter(baseline.add(const Duration(hours: 1))) &&
+          current.difference(device.firstSeenAt) < const Duration(days: 1))
+        device.id,
+  };
+}
+
+const _workspaceChannel = MethodChannel('network_monitor/workspace');
+
+/// Opens the device's web interface in the default browser.
+Future<void> openDeviceWebUi(Uri uri) async {
+  try {
+    await _workspaceChannel.invokeMethod<bool>('openUrl', uri.toString());
+  } on PlatformException {
+    // Nothing to recover: the button simply does nothing.
+  } on MissingPluginException {
+    // Not running on macOS (e.g. tests).
+  }
+}
+
+/// Small "Aç" button for a device with a web interface; an empty slot of
+/// the same width otherwise, so the row's columns stay aligned.
+class OpenWebUiButton extends StatelessWidget {
+  const OpenWebUiButton({super.key, required this.device});
+
+  final Device device;
+
+  static const width = 32.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final uri = device.webUri;
+    if (uri == null) return const SizedBox(width: width);
+    return SizedBox(
+      width: width,
+      child: IconButton(
+        tooltip: 'Web arayüzünü aç ($uri)',
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        iconSize: 16,
+        icon: ThemedHugeIcon(
+          HugeIcons.strokeRoundedLinkSquare02,
+          size: 16,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        onPressed: () => openDeviceWebUi(uri),
+      ),
     );
   }
 }

@@ -15,6 +15,7 @@ enum DeviceColumn {
   ip('IP', 130, DeviceSortField.ip),
   mac('MAC', 150, null),
   vendor('Üretici', 140, null),
+  model('Model', 170, null),
   typeOs('Tür/OS', 200, null),
   lastSeen('Son görülme', 150, DeviceSortField.lastSeen);
 
@@ -31,10 +32,14 @@ class DeviceTable extends ConsumerStatefulWidget {
     super.key,
     required this.devices,
     required this.onDeviceSelected,
+    this.newDeviceIds = const {},
   });
 
   final List<Device> devices;
   final ValueChanged<Device> onDeviceSelected;
+
+  /// Devices to mark "Yeni".
+  final Set<int> newDeviceIds;
 
   @override
   ConsumerState<DeviceTable> createState() => _DeviceTableState();
@@ -277,7 +282,12 @@ class _DeviceTableState extends ConsumerState<DeviceTable> {
         children: [
           Flexible(child: text(device.displayName)),
           const SizedBox(width: 6),
-          DeviceTags(device: device),
+          DeviceTags(
+            device: device,
+            isNew: widget.newDeviceIds.contains(device.id),
+          ),
+          const Spacer(),
+          if (device.webUri != null) OpenWebUiButton(device: device),
         ],
       ),
       DeviceColumn.ip => text(device.currentIp.toString()),
@@ -289,6 +299,8 @@ class _DeviceTableState extends ConsumerState<DeviceTable> {
         device.vendor == null
             ? Text('Bilinmiyor', style: muted)
             : text(device.vendor!),
+      DeviceColumn.model =>
+        device.model == null ? Text('—', style: muted) : text(device.model!),
       DeviceColumn.typeOs => Tooltip(
         message:
             'Tür: ${deviceTypeWithConfidence(device)}\n'
