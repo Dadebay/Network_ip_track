@@ -70,7 +70,8 @@ class PageSection extends StatelessWidget {
   }
 }
 
-/// The app's standard bordered panel.
+/// The app's standard bordered panel. A [Material] rather than a decorated
+/// box, so list tiles and ink splashes inside it render correctly.
 class SurfaceCard extends StatelessWidget {
   const SurfaceCard({
     super.key,
@@ -84,14 +85,14 @@ class SurfaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+    return Material(
+      color: scheme.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
-      child: child,
+      child: Padding(padding: padding, child: child),
     );
   }
 }

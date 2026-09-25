@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../shell_navigation.dart';
+import '../theme/theme_mode_controller.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({
@@ -51,7 +53,10 @@ class AppSidebar extends StatelessWidget {
               selected: selected == ShellDestination.settings,
               onTap: () => onSelected(ShellDestination.settings),
             ),
-            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: ThemeModeSwitch(),
+            ),
           ],
         ),
       ),
@@ -239,6 +244,68 @@ class _SidebarItemState extends State<_SidebarItem> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Sistem / Açık / Koyu appearance picker.
+class ThemeModeSwitch extends ConsumerWidget {
+  const ThemeModeSwitch({super.key});
+
+  static const _options = [
+    (ThemeMode.system, 'Sistem', HugeIcons.strokeRoundedComputerSettings),
+    (ThemeMode.light, 'Açık', HugeIcons.strokeRoundedSun03),
+    (ThemeMode.dark, 'Koyu', HugeIcons.strokeRoundedMoon02),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final current = ref.watch(themeModeProvider);
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          for (final (mode, label, icon) in _options)
+            Expanded(
+              child: Tooltip(
+                message: 'Görünüm: $label',
+                child: Semantics(
+                  button: true,
+                  selected: mode == current,
+                  label: 'Görünüm: $label',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(7),
+                    onTap: () => ref.read(themeModeProvider.notifier).set(mode),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      decoration: BoxDecoration(
+                        color: mode == current
+                            ? scheme.primary.withValues(alpha: 0.18)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      alignment: Alignment.center,
+                      child: HugeIcon(
+                        icon: icon,
+                        size: 16,
+                        strokeWidth: mode == current ? 2 : 1.6,
+                        color: mode == current
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

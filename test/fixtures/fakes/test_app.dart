@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:network_monitor/app/app.dart';
+import 'package:network_monitor/app/theme/theme_mode_controller.dart';
 import 'package:network_monitor/core/database/app_database.dart';
 import 'package:network_monitor/features/discovery/presentation/providers/scan_providers.dart';
 import 'package:network_monitor/features/network_scope/domain/repositories/route_provider.dart';
@@ -40,6 +43,11 @@ Widget buildTestApp({
       ),
       mdnsAdapterProvider.overrideWithValue(mdns ?? FakeMdnsProvider()),
       ssdpAdapterProvider.overrideWithValue(FakeSsdpProvider()),
+      themeModeStoreProvider.overrideWithValue(
+        ThemeModeStore(
+          directory: () async => Directory.systemTemp.createTemp('appearance'),
+        ),
+      ),
       upnpDescriptionAdapterProvider.overrideWithValue(
         FakeUpnpDescriptionProvider(),
       ),

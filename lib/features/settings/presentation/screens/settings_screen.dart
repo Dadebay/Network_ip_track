@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../../../app/theme/theme_mode_controller.dart';
 import '../../../../app/widgets/page_layout.dart';
 import '../../../../app/widgets/themed_huge_icon.dart';
 import '../../../discovery/domain/entities/discovery_method.dart';
@@ -93,6 +94,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: PageListView(
         maxContentWidth: 880,
         children: [
+          PageSection(
+            title: 'Görünüm',
+            subtitle: 'Uygulamanın açık veya koyu temada görünmesi.',
+            child: SurfaceCard(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text('Sistem'),
+                      icon: ThemedHugeIcon(
+                        HugeIcons.strokeRoundedComputerSettings,
+                        size: 16,
+                      ),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text('Açık'),
+                      icon: ThemedHugeIcon(
+                        HugeIcons.strokeRoundedSun03,
+                        size: 16,
+                      ),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text('Koyu'),
+                      icon: ThemedHugeIcon(
+                        HugeIcons.strokeRoundedMoon02,
+                        size: 16,
+                      ),
+                    ),
+                  ],
+                  selected: {ref.watch(themeModeProvider)},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) => ref
+                      .read(themeModeProvider.notifier)
+                      .set(selection.single),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
           PageSection(
             title: 'Tarama',
             subtitle:

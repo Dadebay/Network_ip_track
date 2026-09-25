@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../../../app/shell_navigation.dart';
 import '../../../../app/widgets/failure_view.dart';
+import '../../../../app/widgets/page_layout.dart';
 import '../../../../app/widgets/themed_huge_icon.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/utils/formatters.dart';
@@ -61,122 +62,51 @@ class _DetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final latest = observations.firstOrNull;
     final services = {...?latest?.services}.toList();
     final signals = {...?latest?.signals}.toList();
-    final ports = [
-      for (final signal in signals)
-        if (signal.startsWith('Port ')) signal,
-    ];
-    final reasons = [
-      for (final signal in signals)
-        if (!signal.startsWith('Port ')) signal,
-    ];
+    final history = _ipHistory(observations);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Row(
-          children: [
-            ThemedHugeIcon(deviceTypeIcon(device.effectiveType), size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SelectableText(
-                    device.displayName,
-                    style: theme.textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      DeviceStatusBadge(status: device.status),
-                      DeviceTags(device: device),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (onClose != null)
-              IconButton(
-                tooltip: 'Detayı kapat',
-                onPressed: onClose,
-                icon: const ThemedHugeIcon(HugeIcons.strokeRoundedCancel01),
-              ),
-          ],
-        ),
-        _Section(
-          title: 'Kimlik ve ağ',
+        _Header(device: device, onClose: onClose),
+        const SizedBox(height: 16),
+        _Card(
+          title: 'Genel',
           children: [
             _InfoRow('IP', device.currentIp.toString()),
             _InfoRow(
               'MAC',
               device.macAddress ?? 'Bilinmiyor',
               hint: device.macAddress == null
-                  ? 'MAC yalnızca aynı yerel segmentteki cihazlar için '
-                        'öğrenilebilir; routed alt ağlarda bilinmeyebilir.'
+                  ? 'Yalnızca aynı yerel segmentteki cihazlarda öğrenilir.'
                   : null,
             ),
-            _InfoRow('Hostname', device.hostname ?? 'Bilinmiyor'),
-            _InfoRow('Üretici', device.vendor ?? 'Bilinmiyor'),
-            _InfoRow('İlk görülme', formatDateTime(device.firstSeenAt)),
+            if (device.model != null) _InfoRow('Model', device.model!),
+            if (device.vendor != null) _InfoRow('Üretici', device.vendor!),
+            if (device.hostname != null &&
+                device.shortHostname != device.displayName)
+              _InfoRow('Hostname', device.hostname!),
             _InfoRow('Son görülme', formatDateTime(device.lastSeenAt)),
+            _InfoRow('İlk görülme', formatDateTime(device.firstSeenAt)),
           ],
         ),
-        _UserInfoSection(device: device),
-        _Section(
-          title: 'Tahmini tür ve işletim sistemi',
-          children: [
-            _InfoRow(
-              'Tür',
-              device.inferredType == DeviceType.unknown
-                  ? 'Bilinmiyor'
-                  : '${device.inferredType.label} · ${device.confidence.label}',
-              hint: device.customType == null
-                  ? null
-                  : 'Kullanıcının seçtiği tür (${device.customType!.label}) '
-                        'bu tahminin önüne geçer.',
-            ),
-            _InfoRow('İşletim sistemi', deviceOsWithConfidence(device)),
-            if (device.inferenceReasons.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text('Gerekçeler', style: theme.textTheme.labelLarge),
-              for (final reason in device.inferenceReasons) _Bullet(reason),
+        _UserInfoCard(device: device),
+        _GuessCard(device: device),
+        if (signals.isNotEmpty)
+          _Card(
+            title: 'Keşif sinyalleri',
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final signal in signals) _Chip(signal)],
+              ),
             ],
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Tür ve işletim sistemi tahmindir: MAC üreticisi, hostname, '
-                'mDNS, SSDP, NetBIOS, TTL ve açık portlar yalnızca olasılık '
-                'sağlar.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
-        if (reasons.isNotEmpty)
-          _Section(
-            title: 'Son keşif sinyalleri',
-            children: [for (final reason in reasons) _Bullet(reason)],
           ),
-        _Section(
-          title: 'Görülen servisler',
-          children: [
-            if (services.isEmpty && ports.isEmpty)
-              Text(
-                'Son taramada servis veya açık port görülmedi.',
-                style: theme.textTheme.bodySmall,
-              ),
-            for (final service in services) _Bullet(service),
-            for (final port in ports) _Bullet(port),
-          ],
-        ),
         Padding(
-          padding: const EdgeInsets.only(top: 20),
+          padding: const EdgeInsets.only(top: 12),
           child: DeviceTrafficSection(
             deviceId: device.id,
             onOpenTrafficSettings: () => ref
@@ -184,18 +114,28 @@ class _DetailContent extends ConsumerWidget {
                 .go(ShellDestination.settings),
           ),
         ),
-        _Section(
-          title: 'IP geçmişi',
-          children: [
-            for (final entry in _ipHistory(observations))
-              _InfoRow(
-                entry.ip,
-                entry.first == entry.last
-                    ? formatDateTime(entry.last)
-                    : '${formatDateTime(entry.first)} – ${formatDateTime(entry.last)}',
-              ),
-          ],
-        ),
+        if (services.isNotEmpty || history.length > 1)
+          _Card(
+            title: 'Teknik ayrıntılar',
+            collapsible: true,
+            children: [
+              if (services.isNotEmpty) ...[
+                _SubTitle('Görülen servisler'),
+                for (final service in services) _Bullet(service),
+              ],
+              if (history.length > 1) ...[
+                _SubTitle('IP geçmişi'),
+                for (final entry in history)
+                  _InfoRow(
+                    entry.ip,
+                    entry.first == entry.last
+                        ? formatDateTime(entry.last)
+                        : '${formatDateTime(entry.first)} – '
+                              '${formatDateTime(entry.last)}',
+                  ),
+              ],
+            ],
+          ),
       ],
     );
   }
@@ -224,22 +164,130 @@ class _DetailContent extends ConsumerWidget {
   }
 }
 
-class _UserInfoSection extends ConsumerWidget {
-  const _UserInfoSection({required this.device});
+class _Header extends ConsumerWidget {
+  const _Header({required this.device, this.onClose});
+
+  final Device device;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final subtitle = [
+      if (device.effectiveType != DeviceType.unknown) device.displayType,
+      ?device.inferredOs,
+    ].join(' · ');
+    final webUri = device.webUri;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            IconBadge(icon: deviceTypeIcon(device.effectiveType), size: 48),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SelectableText(
+                    device.displayName,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      DeviceStatusBadge(status: device.status),
+                      DeviceTags(device: device),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (onClose != null)
+              IconButton(
+                tooltip: 'Detayı kapat',
+                onPressed: onClose,
+                icon: const ThemedHugeIcon(HugeIcons.strokeRoundedCancel01),
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.tonalIcon(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => DeviceUserInfoDialog(device: device),
+              ),
+              icon: const ThemedHugeIcon(
+                HugeIcons.strokeRoundedEdit02,
+                size: 16,
+              ),
+              label: const Text('Düzenle'),
+            ),
+            if (webUri != null)
+              OutlinedButton.icon(
+                onPressed: () => openDeviceWebUi(webUri),
+                icon: const ThemedHugeIcon(
+                  HugeIcons.strokeRoundedLinkSquare02,
+                  size: 16,
+                ),
+                label: const Text('Web arayüzü'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _UserInfoCard extends ConsumerWidget {
+  const _UserInfoCard({required this.device});
 
   final Device device;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    return _Section(
+    final hasInfo =
+        device.customName != null ||
+        device.customType != null ||
+        device.note != null;
+    return _Card(
       title: 'Kullanıcı bilgileri',
       children: [
-        _InfoRow('Özel ad', device.customName ?? '—'),
-        _InfoRow('Özel tür', device.customType?.label ?? 'Otomatik'),
-        _InfoRow('Not', device.note ?? '—'),
+        if (device.customName != null) _InfoRow('Özel ad', device.customName!),
+        if (device.customType != null)
+          _InfoRow('Özel tür', device.customType!.label),
+        if (device.note != null) _InfoRow('Not', device.note!),
+        if (!hasInfo)
+          Text(
+            'Ad, tür veya not eklemediniz. "Düzenle" ile ekleyebilirsiniz; '
+            'otomatik tahminin önüne geçer.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
+          dense: true,
           title: const Text('Bu cihazı tanıyorum'),
           value: device.isKnown,
           onChanged: (value) => ref
@@ -252,47 +300,124 @@ class _UserInfoSection extends ConsumerWidget {
                 isKnown: value,
               ),
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: OutlinedButton.icon(
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (_) => DeviceUserInfoDialog(device: device),
-            ),
-            icon: const ThemedHugeIcon(HugeIcons.strokeRoundedEdit02, size: 16),
-            label: const Text('Düzenle'),
-          ),
-        ),
-        Text(
-          'Kendi girdiğiniz ad, tür ve not otomatik tahminin önüne geçer ve '
-          'sonraki taramalarda korunur.',
-          style: theme.textTheme.bodySmall,
-        ),
       ],
     );
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
+class _GuessCard extends StatelessWidget {
+  const _GuessCard({required this.device});
 
-  final String title;
-  final List<Widget> children;
+  final Device device;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+    final theme = Theme.of(context);
+    final type = device.inferredType == DeviceType.unknown
+        ? 'Bilinmiyor'
+        : '${device.inferredType.label} · ${device.confidence.label}';
+    return _Card(
+      title: 'Otomatik tahmin',
+      children: [
+        _InfoRow(
+          'Tür',
+          type,
+          hint: device.customType == null
+              ? null
+              : 'Seçtiğiniz tür (${device.customType!.label}) bu tahminin '
+                    'önüne geçer.',
+        ),
+        _InfoRow('İşletim sistemi', deviceOsWithConfidence(device)),
+        if (device.inferenceReasons.isNotEmpty)
+          Theme(
+            data: theme.copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 4),
+              dense: true,
+              title: Text('Neden?', style: theme.textTheme.labelLarge),
+              expandedAlignment: Alignment.centerLeft,
+              children: [
+                for (final reason in device.inferenceReasons) _Bullet(reason),
+                const SizedBox(height: 4),
+                Text(
+                  'Tahmindir: üretici, hostname, mDNS, SSDP, NetBIOS, TTL ve '
+                  'açık portlar yalnızca olasılık sağlar.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          ...children,
-        ],
+      ],
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.title,
+    required this.children,
+    this.collapsible = false,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool collapsible;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final heading = Semantics(
+      header: true,
+      child: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SurfaceCard(
+        padding: EdgeInsets.fromLTRB(14, collapsible ? 2 : 12, 14, 12),
+        child: collapsible
+            ? Theme(
+                data: theme.copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: heading,
+                  expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: children,
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [heading, const SizedBox(height: 8), ...children],
+              ),
+      ),
+    );
+  }
+}
+
+class _SubTitle extends StatelessWidget {
+  const _SubTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
+      child: Text(
+        text,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -308,31 +433,59 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 104,
             child: Text(
               label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
             ),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SelectableText(value),
-                if (hint != null) Text(hint!, style: theme.textTheme.bodySmall),
+                SelectableText(
+                  value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (hint != null)
+                  Text(
+                    hint!,
+                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                  ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(text, style: theme.textTheme.labelMedium),
     );
   }
 }
@@ -350,7 +503,12 @@ class _Bullet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('•  '),
-          Expanded(child: SelectableText(text)),
+          Expanded(
+            child: SelectableText(
+              text,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         ],
       ),
     );
