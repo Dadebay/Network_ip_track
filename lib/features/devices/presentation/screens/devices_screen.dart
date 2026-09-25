@@ -38,7 +38,9 @@ class DevicesScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Ağı yeniden algıla',
             icon: const ThemedHugeIcon(HugeIcons.strokeRoundedRefresh),
-            onPressed: () => ref.invalidate(networkScopeProvider),
+            onPressed: () => ref
+              ..invalidate(networkScopeProvider)
+              ..invalidate(wifiScanProvider),
           ),
         ],
       ),

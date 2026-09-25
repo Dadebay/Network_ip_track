@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Çevredeki Wi-Fi ağlarının adlarını (SSID) görmek için gerekir; ağdaki erişim noktalarının hangi Wi-Fi'yi yayınladığını göstermek için kullanılır. Konumunuz kaydedilmez.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Çevredeki Wi-Fi ağlarının adlarını (SSID) görmek için gerekir; ağdaki erişim noktalarının hangi Wi-Fi'yi yayınladığını göstermek için kullanılır. Konumunuz kaydedilmez.</string>
 </dict>
 </plist>

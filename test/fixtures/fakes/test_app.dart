@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:network_monitor/app/app.dart';
 import 'package:network_monitor/app/theme/theme_mode_controller.dart';
+import 'package:network_monitor/features/network_scope/infrastructure/macos/macos_wifi_scanner.dart';
 import 'package:network_monitor/core/database/app_database.dart';
 import 'package:network_monitor/features/discovery/presentation/providers/scan_providers.dart';
 import 'package:network_monitor/features/network_scope/domain/repositories/route_provider.dart';
@@ -28,6 +29,7 @@ Widget buildTestApp({
   FakePortProbeProvider? ports,
   RouteProvider routes = const FakeRouteProvider(),
   FakeOuiLookup oui = const FakeOuiLookup(),
+  MacosWifiScanner? wifi,
 }) {
   return ProviderScope(
     overrides: [
@@ -36,6 +38,7 @@ Widget buildTestApp({
       ),
       routeAdapterProvider.overrideWithValue(routes),
       appDatabaseProvider.overrideWithValue(database),
+      if (wifi != null) wifiScannerProvider.overrideWithValue(wifi),
       pingAdapterProvider.overrideWithValue(ping ?? FakePingProvider()),
       arpTableAdapterProvider.overrideWithValue(arp ?? FakeArpTableProvider()),
       reverseDnsAdapterProvider.overrideWithValue(

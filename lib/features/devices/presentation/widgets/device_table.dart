@@ -7,6 +7,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../application/device_query.dart';
 import '../../domain/entities/device.dart';
 import '../providers/device_providers.dart';
+import '../../../network_scope/presentation/providers/network_scope_providers.dart';
 import 'device_visuals.dart';
 
 enum DeviceColumn {
@@ -16,6 +17,7 @@ enum DeviceColumn {
   mac('MAC', 150, null),
   vendor('Üretici', 140, null),
   model('Model', 170, null),
+  wifi('Wi-Fi', 160, null),
   typeOs('Tür/OS', 200, null),
   lastSeen('Son görülme', 150, DeviceSortField.lastSeen);
 
@@ -301,6 +303,14 @@ class _DeviceTableState extends ConsumerState<DeviceTable> {
             : text(device.vendor!),
       DeviceColumn.model =>
         device.model == null ? Text('—', style: muted) : text(device.model!),
+      DeviceColumn.wifi => switch (ref.watch(
+        wifiNetworksForMacProvider(device.macAddress),
+      )) {
+        final networks when networks.isNotEmpty => WifiLabel(
+          networks: networks,
+        ),
+        _ => Text('—', style: muted),
+      },
       DeviceColumn.typeOs => Tooltip(
         message:
             'Tür: ${deviceTypeWithConfidence(device)}\n'

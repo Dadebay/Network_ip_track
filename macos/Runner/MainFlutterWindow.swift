@@ -1,4 +1,6 @@
 import Cocoa
+import CoreLocation
+import CoreWLAN
 import FlutterMacOS
 import Darwin
 import Security
@@ -7,6 +9,7 @@ class MainFlutterWindow: NSWindow {
   private var keychainChannel: KeychainChannel?
   private var icmpChannel: IcmpChannel?
   private var workspaceChannel: FlutterMethodChannel?
+  private var wifiChannel: WifiChannel?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -18,6 +21,8 @@ class MainFlutterWindow: NSWindow {
     keychainChannel = KeychainChannel(
       messenger: flutterViewController.engine.binaryMessenger)
     icmpChannel = IcmpChannel(
+      messenger: flutterViewController.engine.binaryMessenger)
+    wifiChannel = WifiChannel(
       messenger: flutterViewController.engine.binaryMessenger)
     workspaceChannel = FlutterMethodChannel(
       name: "network_monitor/workspace",
@@ -36,6 +41,100 @@ class MainFlutterWindow: NSWindow {
     }
 
     super.awakeFromNib()
+  }
+}
+
+/// Nearby Wi-Fi networks from CoreWLAN, to tell which SSID an access point
+/// on the LAN broadcasts. macOS reveals SSIDs and BSSIDs only to apps with
+/// Location Services permission, so the first scan asks for it.
+final class WifiChannel: NSObject, CLLocationManagerDelegate {
+  private let channel: FlutterMethodChannel
+  private let locationManager = CLLocationManager()
+  private var pending: [FlutterResult] = []
+  private let queue = DispatchQueue(label: "network_monitor.wifi", qos: .utility)
+
+  init(messenger: FlutterBinaryMessenger) {
+    channel = FlutterMethodChannel(name: "network_monitor/wifi", binaryMessenger: messenger)
+    super.init()
+    locationManager.delegate = self
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "scan", let self = self else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      self.scan(result: result)
+    }
+  }
+
+  private var authorizationStatus: CLAuthorizationStatus {
+    if #available(macOS 11.0, *) {
+      return locationManager.authorizationStatus
+    }
+    return CLLocationManager.authorizationStatus()
+  }
+
+  private func scan(result: @escaping FlutterResult) {
+    if authorizationStatus == .notDetermined {
+      pending.append(result)
+      locationManager.requestWhenInUseAuthorization()
+      return
+    }
+    performScan(result: result)
+  }
+
+  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    flushPending()
+  }
+
+  func locationManager(
+    _ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus
+  ) {
+    flushPending()
+  }
+
+  private func flushPending() {
+    guard authorizationStatus != .notDetermined, !pending.isEmpty else { return }
+    let waiting = pending
+    pending = []
+    for result in waiting {
+      performScan(result: result)
+    }
+  }
+
+  private func performScan(result: @escaping FlutterResult) {
+    let status = authorizationStatus
+    let authorized = status != .denied && status != .restricted && status != .notDetermined
+    queue.async {
+      var payload: [String: Any] = ["authorized": authorized]
+      defer {
+        let reply = payload
+        DispatchQueue.main.async { result(reply) }
+      }
+      guard let iface = CWWiFiClient.shared().interface() else {
+        payload["status"] = "noWifi"
+        return
+      }
+      guard iface.powerOn() else {
+        payload["status"] = "wifiOff"
+        return
+      }
+      do {
+        let networks = try iface.scanForNetworks(withSSID: nil)
+        payload["networks"] = networks.map { network -> [String: Any] in
+          var entry: [String: Any] = ["rssi": network.rssiValue]
+          if let ssid = network.ssid { entry["ssid"] = ssid }
+          if let bssid = network.bssid { entry["bssid"] = bssid }
+          if let channel = network.wlanChannel { entry["channel"] = channel.channelNumber }
+          return entry
+        }
+        payload["status"] = "ok"
+      } catch {
+        payload["status"] = "error"
+        payload["message"] = error.localizedDescription
+      }
+      if let ssid = iface.ssid() { payload["currentSsid"] = ssid }
+      if let bssid = iface.bssid() { payload["currentBssid"] = bssid }
+    }
   }
 }
 

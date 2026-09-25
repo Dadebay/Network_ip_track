@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../../app/widgets/themed_huge_icon.dart';
+import '../../../network_scope/application/wifi_matching.dart';
+import '../../../network_scope/domain/entities/wifi_scan.dart';
 import '../../domain/entities/device.dart';
 import '../../domain/entities/device_confidence.dart';
 import '../../domain/entities/device_status.dart';
@@ -217,6 +219,44 @@ class OpenWebUiButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary,
         ),
         onPressed: () => openDeviceWebUi(uri),
+      ),
+    );
+  }
+}
+
+/// "Wi-Fi: HENRY3, HENRY3_5G" for an access point, with the matching
+/// caveat in the tooltip.
+class WifiLabel extends StatelessWidget {
+  const WifiLabel({super.key, required this.networks});
+
+  final List<WifiNetwork> networks;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
+    return Tooltip(
+      message:
+          'Tahmini: bu Wi-Fi yayınlarının donanım adresi (BSSID) cihazın '
+          'MAC adresine çok yakın.\n'
+          '${[for (final n in networks) '${n.ssid} · ${n.band} · ${n.rssi} dBm'].join('\n')}',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ThemedHugeIcon(HugeIcons.strokeRoundedWifi01, size: 13, color: color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              describeWifiNetworks(networks),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

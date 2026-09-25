@@ -8,6 +8,7 @@ import '../../../../app/widgets/page_layout.dart';
 import '../../../../app/widgets/themed_huge_icon.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../network_scope/presentation/providers/network_scope_providers.dart';
 import '../../../traffic/presentation/widgets/device_traffic_section.dart';
 import '../../domain/entities/device.dart';
 import '../../domain/entities/device_confidence.dart';
@@ -84,6 +85,17 @@ class _DetailContent extends ConsumerWidget {
                   : null,
             ),
             if (device.model != null) _InfoRow('Model', device.model!),
+            if (ref.watch(wifiNetworksForMacProvider(device.macAddress))
+                case final wifi when wifi.isNotEmpty)
+              _InfoRow(
+                'Wi-Fi',
+                [
+                  for (final n in wifi) '${n.ssid} (${n.band}, ${n.rssi} dBm)',
+                ].join('\n'),
+                hint:
+                    'Tahmini: yayın adresi (BSSID) cihazın MAC adresine çok '
+                    'yakın.',
+              ),
             if (device.vendor != null) _InfoRow('Üretici', device.vendor!),
             if (device.hostname != null &&
                 device.shortHostname != device.displayName)

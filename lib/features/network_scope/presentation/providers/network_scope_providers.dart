@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/cidr.dart';
 import '../../application/detect_network_scope_use_case.dart';
+import '../../application/wifi_matching.dart';
 import '../../domain/entities/network_scope_snapshot.dart';
+import '../../domain/entities/wifi_scan.dart';
 import '../../domain/repositories/network_interface_provider.dart';
 import '../../domain/repositories/route_provider.dart';
 import '../../infrastructure/macos/macos_network_interface_provider.dart';
 import '../../infrastructure/macos/macos_route_provider.dart';
+import '../../infrastructure/macos/macos_wifi_scanner.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -130,3 +133,24 @@ final currentNetworkLookupProvider =
         return cached!;
       };
     });
+
+final wifiScannerProvider = Provider<MacosWifiScanner>(
+  (ref) => const MacosWifiScanner(),
+);
+
+/// Nearby Wi-Fi networks, scanned once and kept until refreshed.
+final wifiScanProvider = FutureProvider<WifiScan>(
+  (ref) => ref.watch(wifiScannerProvider).scan(),
+);
+
+/// Wi-Fi networks the access point with this LAN MAC likely broadcasts.
+final wifiNetworksForMacProvider = Provider.family<List<WifiNetwork>, String?>((
+  ref,
+  mac,
+) {
+  final scan = ref.watch(wifiScanProvider).value;
+  if (mac == null || scan == null || scan.status != WifiScanStatus.ok) {
+    return const [];
+  }
+  return wifiNetworksFor(mac, scan.networks);
+});

@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../../app/widgets/themed_huge_icon.dart';
+import '../../../network_scope/application/wifi_matching.dart';
+import '../../../network_scope/domain/entities/wifi_scan.dart';
+import '../../../network_scope/presentation/providers/network_scope_providers.dart';
 import '../../application/device_graph.dart';
 import '../../application/device_tree.dart';
 import '../../domain/entities/device.dart';
@@ -250,7 +253,16 @@ class _DeviceMapViewState extends ConsumerState<DeviceMapView>
               ),
             ),
             if (hovered != null)
-              Positioned(top: 12, left: 12, child: _HoverCard(node: hovered)),
+              Positioned(
+                top: 12,
+                left: 12,
+                child: _HoverCard(
+                  node: hovered,
+                  wifi: ref.watch(
+                    wifiNetworksForMacProvider(hovered.device?.macAddress),
+                  ),
+                ),
+              ),
             Positioned(
               left: 12,
               bottom: 12,
@@ -401,9 +413,10 @@ class _MapPainter extends CustomPainter {
 }
 
 class _HoverCard extends StatelessWidget {
-  const _HoverCard({required this.node});
+  const _HoverCard({required this.node, required this.wifi});
 
   final GraphNode node;
+  final List<WifiNetwork> wifi;
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +427,7 @@ class _HoverCard extends StatelessWidget {
         ? const <String>[]
         : [
             device.currentIp.toString(),
+            if (wifi.isNotEmpty) 'Wi-Fi: ${describeWifiNetworks(wifi)}',
             ?device.model,
             ?device.vendor,
             device.displayType,

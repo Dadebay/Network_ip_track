@@ -10,6 +10,7 @@ import '../../domain/entities/network_scope_snapshot.dart';
 import '../providers/network_scope_providers.dart';
 import '../widgets/accessible_subnet_list.dart';
 import '../widgets/network_interface_card.dart';
+import '../widgets/wifi_networks_section.dart';
 
 class NetworkScopeScreen extends ConsumerWidget {
   const NetworkScopeScreen({super.key});
@@ -25,7 +26,9 @@ class NetworkScopeScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Yenile',
             icon: const ThemedHugeIcon(HugeIcons.strokeRoundedRefresh),
-            onPressed: () => ref.invalidate(networkScopeProvider),
+            onPressed: () => ref
+              ..invalidate(networkScopeProvider)
+              ..invalidate(wifiScanProvider),
           ),
         ],
       ),
@@ -91,6 +94,8 @@ class _NetworkScopeContent extends StatelessWidget {
           subtitle: 'Route tablosuna göre bu Mac\'in ulaşabildiği alt ağlar.',
           child: AccessibleSubnetList(subnets: snapshot.accessibleSubnets),
         ),
+        const SizedBox(height: 28),
+        const WifiNetworksSection(),
       ],
     );
   }

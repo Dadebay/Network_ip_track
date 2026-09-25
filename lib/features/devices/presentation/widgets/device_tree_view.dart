@@ -12,6 +12,7 @@ import '../../domain/entities/device.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/device_type.dart';
 import '../providers/device_providers.dart';
+import '../../../network_scope/presentation/providers/network_scope_providers.dart';
 import 'device_visuals.dart';
 
 const double _indentWidth = 22;
@@ -528,7 +529,7 @@ class _HeaderRow extends StatelessWidget {
   }
 }
 
-class _GatewayRow extends StatelessWidget {
+class _GatewayRow extends ConsumerWidget {
   const _GatewayRow({
     required this.row,
     required this.device,
@@ -544,9 +545,10 @@ class _GatewayRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final wifi = ref.watch(wifiNetworksForMacProvider(device.macAddress));
     return _RowChrome(
       depth: row.depth,
       selected: selected,
@@ -582,6 +584,10 @@ class _GatewayRow extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
           ),
+          if (wifi.isNotEmpty) ...[
+            const SizedBox(width: 12),
+            Flexible(child: WifiLabel(networks: wifi)),
+          ],
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -660,7 +666,7 @@ class _GroupRow extends StatelessWidget {
   };
 }
 
-class _DeviceRow extends StatelessWidget {
+class _DeviceRow extends ConsumerWidget {
   const _DeviceRow({
     required this.row,
     required this.device,
@@ -680,9 +686,10 @@ class _DeviceRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final wifi = ref.watch(wifiNetworksForMacProvider(device.macAddress));
     final model = device.model;
     final secondary = model == null
         ? device.vendor ?? deviceOsWithConfidence(device)
@@ -766,13 +773,24 @@ class _DeviceRow extends StatelessWidget {
               if (!narrow) ...[
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    secondary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  child: Row(
+                    children: [
+                      if (wifi.isNotEmpty) ...[
+                        Flexible(child: WifiLabel(networks: wifi)),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        flex: 2,
+                        child: Text(
+                          secondary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ] else
