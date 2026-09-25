@@ -30,7 +30,7 @@ final deviceObservationsProvider = StreamProvider.autoDispose
       return ref.watch(deviceRepositoryProvider).watchObservations(deviceId);
     });
 
-enum DeviceViewMode { tree, list }
+enum DeviceViewMode { tree, list, map }
 
 class DeviceQueryController extends Notifier<DeviceQuery> {
   @override

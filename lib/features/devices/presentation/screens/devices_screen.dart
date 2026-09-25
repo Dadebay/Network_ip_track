@@ -15,6 +15,7 @@ import '../../application/device_tree.dart';
 import '../../domain/entities/device.dart';
 import '../providers/device_providers.dart';
 import '../widgets/device_detail_panel.dart';
+import '../widgets/device_map_view.dart';
 import '../widgets/device_table.dart';
 import '../widgets/device_toolbar.dart';
 import '../widgets/device_tree_view.dart';
@@ -136,6 +137,15 @@ class _DevicesBody extends ConsumerWidget {
                     ),
                     DeviceViewMode.list => DeviceTable(
                       devices: visible,
+                      newDeviceIds: newIds,
+                      onDeviceSelected: select,
+                    ),
+                    DeviceViewMode.map => DeviceMapView(
+                      roots: buildDeviceTree(
+                        devices: visible,
+                        subnets: network.snapshot.accessibleSubnets,
+                        activeSubnet: network.snapshot.activeInterface?.cidr,
+                      ),
                       newDeviceIds: newIds,
                       onDeviceSelected: select,
                     ),

@@ -353,9 +353,7 @@ class _ViewModeToggle extends StatelessWidget {
           AnimatedAlign(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
-            alignment: value == DeviceViewMode.tree
-                ? Alignment.centerLeft
-                : Alignment.centerRight,
+            alignment: Alignment(-1 + 2 * value.index / (modes.length - 1), 0),
             child: Container(
               width: _segmentWidth,
               decoration: BoxDecoration(
@@ -383,6 +381,13 @@ class _ViewModeToggle extends StatelessWidget {
                 'Liste',
                 'Sütunlu, sıralanabilir tablo',
                 HugeIcons.strokeRoundedLeftToRightListBullet,
+              ),
+              _segment(
+                context,
+                DeviceViewMode.map,
+                'Harita',
+                'Ağ haritası: alt ağlar, gruplar ve cihazlar',
+                HugeIcons.strokeRoundedAiNetwork,
               ),
             ],
           ),
