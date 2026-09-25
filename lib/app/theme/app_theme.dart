@@ -17,9 +17,6 @@ class AppTheme {
       colorScheme: colorScheme,
       fontFamily: 'Gilroy',
       scaffoldBackgroundColor: colorScheme.surface,
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: colorScheme.surfaceContainerLow,
-      ),
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(

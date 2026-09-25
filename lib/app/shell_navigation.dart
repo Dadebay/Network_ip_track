@@ -4,11 +4,11 @@ import 'package:hugeicons/hugeicons.dart';
 /// Sidebar destinations. Mirrors the spec's left panel, with the device
 /// tree/list ("Cihazlar") as the main view.
 enum ShellDestination {
-  devices('Cihazlar', HugeIcons.strokeRoundedHierarchy),
-  networks('Ağlar', HugeIcons.strokeRoundedRouter01),
-  scanScopes('Tarama kapsamları', HugeIcons.strokeRoundedRadar01),
-  recentScans('Son taramalar', HugeIcons.strokeRoundedTime01),
-  settings('Ayarlar', HugeIcons.strokeRoundedSettings02);
+  devices('Cihazlar', HugeIcons.strokeRoundedLaptopPhoneSync),
+  networks('Ağlar', HugeIcons.strokeRoundedHierarchySquare02),
+  scanScopes('Tarama kapsamları', HugeIcons.strokeRoundedTarget02),
+  recentScans('Son taramalar', HugeIcons.strokeRoundedWorkHistory),
+  settings('Ayarlar', HugeIcons.strokeRoundedSettings01);
 
   const ShellDestination(this.label, this.icon);
 

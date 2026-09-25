@@ -8,7 +8,7 @@ import '../features/network_scope/presentation/screens/network_scope_screen.dart
 import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/traffic/presentation/providers/traffic_providers.dart';
 import 'shell_navigation.dart';
-import 'widgets/themed_huge_icon.dart';
+import 'widgets/app_sidebar.dart';
 
 /// Sidebar + content shell. The sidebar sections mirror the spec's
 /// left-panel layout (Ağlar / Tarama kapsamları / Son taramalar / Ayarlar),
@@ -25,21 +25,10 @@ class RootShell extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: destination.index,
-            onDestinationSelected: (index) => ref
-                .read(shellDestinationProvider.notifier)
-                .go(ShellDestination.values[index]),
-            labelType: NavigationRailLabelType.all,
-            destinations: [
-              for (final destination in ShellDestination.values)
-                NavigationRailDestination(
-                  icon: ThemedHugeIcon(destination.icon),
-                  label: Text(destination.label),
-                ),
-            ],
+          AppSidebar(
+            selected: destination,
+            onSelected: ref.read(shellDestinationProvider.notifier).go,
           ),
-          const VerticalDivider(width: 1),
           Expanded(child: _buildContent(destination)),
         ],
       ),
