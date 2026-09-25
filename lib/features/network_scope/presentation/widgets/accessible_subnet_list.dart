@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-import '../../../../app/widgets/themed_huge_icon.dart';
+import '../../../../app/widgets/page_layout.dart';
 import '../../domain/entities/accessible_subnet.dart';
 import '../../domain/entities/subnet_reachability.dart';
 
@@ -13,45 +13,91 @@ class AccessibleSubnetList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (subnets.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
+      return const SurfaceCard(
         child: Text(
           'Route tablosunda erişilebilir özel 172 alt ağı bulunamadı.',
         ),
       );
     }
 
-    return Column(
-      children: [
-        for (final subnet in subnets)
-          Card(
-            child: ListTile(
-              leading: ThemedHugeIcon(_iconFor(subnet.reachability)),
-              title: Text(subnet.cidr.toString()),
-              subtitle: Text(
-                [
-                  _labelFor(subnet.reachability),
-                  if (subnet.viaInterface != null)
-                    'arayüz: ${subnet.viaInterface}',
-                  if (subnet.gateway != null) 'gateway: ${subnet.gateway}',
-                ].join(' · '),
-              ),
-            ),
-          ),
-      ],
+    return SurfaceCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        children: [
+          for (final (index, subnet) in subnets.indexed) ...[
+            if (index > 0) const Divider(height: 1),
+            _SubnetRow(subnet: subnet),
+          ],
+        ],
+      ),
     );
   }
+}
 
-  List<List<dynamic>> _iconFor(SubnetReachability reachability) =>
-      switch (reachability) {
-        SubnetReachability.directlyConnected => HugeIcons.strokeRoundedLink01,
-        SubnetReachability.routed => HugeIcons.strokeRoundedRoute01,
-        SubnetReachability.unreachable => HugeIcons.strokeRoundedUnlink01,
-      };
+class _SubnetRow extends StatelessWidget {
+  const _SubnetRow({required this.subnet});
 
-  String _labelFor(SubnetReachability reachability) => switch (reachability) {
-    SubnetReachability.directlyConnected => 'Doğrudan bağlı',
-    SubnetReachability.routed => 'Router üzerinden erişilebilir',
-    SubnetReachability.unreachable => 'Erişilemiyor',
-  };
+  final AccessibleSubnet subnet;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final (icon, label, color) = switch (subnet.reachability) {
+      SubnetReachability.directlyConnected => (
+        HugeIcons.strokeRoundedLink01,
+        'Doğrudan bağlı',
+        Colors.green.shade400,
+      ),
+      SubnetReachability.routed => (
+        HugeIcons.strokeRoundedRoute01,
+        'Router üzerinden',
+        scheme.primary,
+      ),
+      SubnetReachability.unreachable => (
+        HugeIcons.strokeRoundedUnlink01,
+        'Erişilemiyor',
+        scheme.error,
+      ),
+    };
+    final details = [
+      if (subnet.viaInterface != null) 'arayüz: ${subnet.viaInterface}',
+      if (subnet.gateway != null) 'gateway: ${subnet.gateway}',
+    ].join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          IconBadge(icon: icon, color: color, size: 36),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subnet.cidr.toString(),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    details,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          StatusPill(text: label, color: color),
+        ],
+      ),
+    );
+  }
 }

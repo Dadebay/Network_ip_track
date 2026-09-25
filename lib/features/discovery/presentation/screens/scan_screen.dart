@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../../../app/shell_navigation.dart';
 import '../../../../app/widgets/failure_view.dart';
+import '../../../../app/widgets/page_layout.dart';
 import '../../../../app/widgets/themed_huge_icon.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/utils/cidr.dart';
@@ -123,7 +124,7 @@ class _ScanBodyState extends ConsumerState<_ScanBody> {
     final progress = scanState.progress;
     final running = scanState.isRunning;
 
-    final scopeSection = _Section(
+    final scopeSection = PageSection(
       title: 'Kapsam',
       subtitle: 'Hangi adreslerin taranacağını seçin.',
       child: RadioGroup<ScanScopeType>(
@@ -163,7 +164,7 @@ class _ScanBodyState extends ConsumerState<_ScanBody> {
       ),
     );
 
-    final previewSection = _Section(
+    final previewSection = PageSection(
       title: 'Tarama önizlemesi',
       subtitle: 'Başlatmadan önce ne yapılacağını kontrol edin.',
       child: _PlanPreview(
@@ -179,15 +180,20 @@ class _ScanBodyState extends ConsumerState<_ScanBody> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const maxContentWidth = 1180.0;
         final wide = constraints.maxWidth >= 980;
-        final sidePadding = constraints.maxWidth > maxContentWidth + 48
-            ? (constraints.maxWidth - maxContentWidth) / 2
-            : 24.0;
-        return ListView(
-          padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 32),
+        return PageListView(
           children: [
-            const _AuthorizationNotice(),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 24),
+              child: InfoBanner(
+                icon: HugeIcons.strokeRoundedShield01,
+                title: 'Yalnızca yetkili olduğunuz ağlarda kullanın',
+                message:
+                    'Tarama düşük hızdadır ve yalnızca cihaz keşfi yapar: '
+                    'güvenlik açığı arama, parola deneme veya kapsamlı port '
+                    'taraması yapılmaz.',
+              ),
+            ),
             if (resumable != null && !running)
               _ResumeBanner(
                 session: resumable,
@@ -297,95 +303,6 @@ class _LargeScanDialog extends StatelessWidget {
   }
 }
 
-class _AuthorizationNotice extends StatelessWidget {
-  const _AuthorizationNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.secondary.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ThemedHugeIcon(
-            HugeIcons.strokeRoundedShield01,
-            size: 20,
-            color: scheme.secondary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Yalnızca yetkili olduğunuz ağlarda kullanın',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Tarama düşük hızdadır ve yalnızca cihaz keşfi yapar: '
-                  'güvenlik açığı arama, parola deneme veya kapsamlı port '
-                  'taraması yapılmaz.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 14),
-        child,
-      ],
-    );
-  }
-}
-
 /// A selectable card for one scope option; the radio stays in the card so
 /// the whole card and the radio both select it.
 class _ScopeOption extends StatelessWidget {
@@ -415,12 +332,12 @@ class _ScopeOption extends StatelessWidget {
       ScanScopeType.currentSubnet => (HugeIcons.strokeRoundedWifi01, null),
       ScanScopeType.allAccessiblePrivate172 => (
         HugeIcons.strokeRoundedHierarchySquare02,
-        _Badge.recommended,
+        StatusPill(text: 'Önerilen', color: scheme.primary),
       ),
       ScanScopeType.customCidr => (HugeIcons.strokeRoundedEdit02, null),
       ScanScopeType.fullPrivate172Block => (
         HugeIcons.strokeRoundedGlobe02,
-        _Badge.advanced,
+        StatusPill(text: 'Gelişmiş', color: scheme.tertiary),
       ),
     };
     final radius = BorderRadius.circular(14);
@@ -520,37 +437,6 @@ class _ScopeOption extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge(this.text, {this.warning = false});
-
-  static const recommended = _Badge('Önerilen');
-  static const advanced = _Badge('Gelişmiş', warning: true);
-
-  final String text;
-  final bool warning;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final color = warning ? scheme.tertiary : scheme.primary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _ResumeBanner extends StatelessWidget {
   const _ResumeBanner({
     required this.session,
@@ -619,13 +505,7 @@ class _PlanPreview extends StatelessWidget {
     final scheme = theme.colorScheme;
     final plan = this.plan;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+    return SurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

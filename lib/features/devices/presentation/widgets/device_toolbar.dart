@@ -332,30 +332,59 @@ class _ViewModeToggle extends StatelessWidget {
   final DeviceViewMode value;
   final ValueChanged<DeviceViewMode> onChanged;
 
+  static const _segmentWidth = 96.0;
+  static const _inset = 3.0;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const modes = DeviceViewMode.values;
     return Container(
       height: _controlHeight,
-      padding: const EdgeInsets.all(3),
+      width: _segmentWidth * modes.length + _inset * 2,
+      padding: const EdgeInsets.all(_inset),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(_controlRadius),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          _segment(
-            context,
-            DeviceViewMode.tree,
-            'Ağaç',
-            HugeIcons.strokeRoundedHierarchy,
+          AnimatedAlign(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: value == DeviceViewMode.tree
+                ? Alignment.centerLeft
+                : Alignment.centerRight,
+            child: Container(
+              width: _segmentWidth,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(_controlRadius - _inset),
+                border: Border.all(
+                  color: scheme.primary.withValues(alpha: 0.45),
+                ),
+              ),
+            ),
           ),
-          _segment(
-            context,
-            DeviceViewMode.list,
-            'Liste',
-            HugeIcons.strokeRoundedLeftToRightListBullet,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _segment(
+                context,
+                DeviceViewMode.tree,
+                'Ağaç',
+                'Alt ağ ve cihaz türüne göre gruplu',
+                HugeIcons.strokeRoundedHierarchy,
+              ),
+              _segment(
+                context,
+                DeviceViewMode.list,
+                'Liste',
+                'Sütunlu, sıralanabilir tablo',
+                HugeIcons.strokeRoundedLeftToRightListBullet,
+              ),
+            ],
           ),
         ],
       ),
@@ -366,53 +395,51 @@ class _ViewModeToggle extends StatelessWidget {
     BuildContext context,
     DeviceViewMode mode,
     String label,
+    String tooltip,
     List<List<dynamic>> icon,
   ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final selected = mode == value;
-    final foreground = selected ? scheme.primary : scheme.onSurfaceVariant;
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: GestureDetector(
-        onTap: () => onChanged(mode),
+    final color = selected ? scheme.primary : scheme.onSurfaceVariant;
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 600),
+      child: Semantics(
+        button: true,
+        selected: selected,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: selected
-                  ? (theme.brightness == Brightness.dark
-                        ? scheme.surfaceBright
-                        : scheme.surface)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(_controlRadius - 3),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onChanged(mode),
+            child: SizedBox(
+              width: _segmentWidth,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ThemedHugeIcon(icon, size: 16, color: color),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 180),
+                      style: (theme.textTheme.labelLarge ?? const TextStyle())
+                          .copyWith(
+                            color: selected ? scheme.primary : color,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
                       ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ThemedHugeIcon(icon, size: 16, color: foreground),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: selected ? scheme.onSurface : foreground,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

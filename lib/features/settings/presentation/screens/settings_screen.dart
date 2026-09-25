@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../../../app/widgets/page_layout.dart';
 import '../../../../app/widgets/themed_huge_icon.dart';
-
 import '../../../discovery/domain/entities/discovery_method.dart';
 import '../../../discovery/domain/entities/scan_settings.dart';
 import '../../../discovery/presentation/providers/scan_providers.dart';
@@ -86,146 +86,214 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final settings = ref.watch(scanSettingsProvider);
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ayarlar')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: PageListView(
+        maxContentWidth: 880,
         children: [
-          Text('Tarama', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(
-            'Ayarlar kaydedilir ve yeni başlatılan taramalara uygulanır; '
-            'devam ettirilen taramalar başladıkları ayarlarla sürer.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-          _SliderSetting(
-            label: 'Eşzamanlı yoklama',
-            valueLabel: '${settings.concurrency}',
-            value: settings.concurrency.toDouble(),
-            min: 1,
-            max: 32,
-            divisions: 31,
-            onChanged: (value) =>
-                _update((s) => s.copyWith(concurrency: value.round())),
-          ),
-          _SliderSetting(
-            label: 'Eşzamanlı alt ağ',
-            valueLabel: '${settings.chunkConcurrency}',
-            value: settings.chunkConcurrency.toDouble(),
-            min: 1,
-            max: 16,
-            divisions: 15,
-            onChanged: (value) =>
-                _update((s) => s.copyWith(chunkConcurrency: value.round())),
-          ),
-          Text(
-            'Aynı anda taranan /24 alt ağ sayısı. Büyük kapsamlarda (ör. tüm '
-            '172.16.0.0/12 bloğu) bunu artırmak taramayı orantılı hızlandırır.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          _SliderSetting(
-            label: 'Ping zaman aşımı',
-            valueLabel: '${settings.pingTimeout.inMilliseconds} ms',
-            value: settings.pingTimeout.inMilliseconds.toDouble(),
-            min: 200,
-            max: 3000,
-            divisions: 28,
-            onChanged: (value) => _update(
-              (s) => s.copyWith(
-                pingTimeout: Duration(milliseconds: value.round()),
-              ),
-            ),
-          ),
-          _SliderSetting(
-            label: 'Port zaman aşımı',
-            valueLabel: '${settings.portProbeTimeout.inMilliseconds} ms',
-            value: settings.portProbeTimeout.inMilliseconds.toDouble(),
-            min: 200,
-            max: 3000,
-            divisions: 28,
-            onChanged: (value) => _update(
-              (s) => s.copyWith(
-                portProbeTimeout: Duration(milliseconds: value.round()),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text('Keşif yöntemleri', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final method in DiscoveryMethod.values)
-                FilterChip(
-                  label: Text(method.label),
-                  selected: settings.methods.contains(method),
-                  onSelected: (selected) => _update(
-                    (s) => s.copyWith(
-                      methods: selected
-                          ? {...s.methods, method}
-                          : ({...s.methods}..remove(method)),
+          PageSection(
+            title: 'Tarama',
+            subtitle:
+                'Ayarlar kaydedilir ve yeni başlatılan taramalara uygulanır; '
+                'devam ettirilen taramalar başladıkları ayarlarla sürer.',
+            child: SurfaceCard(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+              child: Column(
+                children: [
+                  _SliderSetting(
+                    label: 'Eşzamanlı yoklama',
+                    description:
+                        'Bir alt ağ içinde aynı anda yoklanan adres sayısı.',
+                    valueLabel: '${settings.concurrency}',
+                    value: settings.concurrency.toDouble(),
+                    min: 1,
+                    max: 32,
+                    divisions: 31,
+                    onChanged: (value) =>
+                        _update((s) => s.copyWith(concurrency: value.round())),
+                  ),
+                  const Divider(height: 1),
+                  _SliderSetting(
+                    label: 'Eşzamanlı alt ağ',
+                    description:
+                        'Aynı anda taranan /24 alt ağ sayısı. Büyük '
+                        'kapsamlarda (ör. tüm 172.16.0.0/12 bloğu) bunu '
+                        'artırmak taramayı orantılı hızlandırır.',
+                    valueLabel: '${settings.chunkConcurrency}',
+                    value: settings.chunkConcurrency.toDouble(),
+                    min: 1,
+                    max: 16,
+                    divisions: 15,
+                    onChanged: (value) => _update(
+                      (s) => s.copyWith(chunkConcurrency: value.round()),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Text('Sınırlı port listesi', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _portsController,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              helperText:
-                  'Virgülle ayırın. Yalnızca cihaz türü tahmini için bağlantı '
-                  'denemesi yapılır; veri gönderilmez.',
-              errorText: _portsError,
-            ),
-            onSubmitted: (_) => _savePorts(),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              children: [
-                FilledButton(
-                  onPressed: _savePorts,
-                  child: const Text('Portları kaydet'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _portsController.text = const ScanSettings().limitedPorts
-                        .join(', ');
-                    _savePorts();
-                  },
-                  child: const Text('Varsayılana dön'),
-                ),
-              ],
+                  const Divider(height: 1),
+                  _SliderSetting(
+                    label: 'Ping zaman aşımı',
+                    description:
+                        'Cevap vermeyen bir adres için ping bekleme süresi.',
+                    valueLabel: '${settings.pingTimeout.inMilliseconds} ms',
+                    value: settings.pingTimeout.inMilliseconds.toDouble(),
+                    min: 200,
+                    max: 3000,
+                    divisions: 28,
+                    onChanged: (value) => _update(
+                      (s) => s.copyWith(
+                        pingTimeout: Duration(milliseconds: value.round()),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  _SliderSetting(
+                    label: 'Port zaman aşımı',
+                    description: 'Port kontrolünde bağlantı başına bekleme.',
+                    valueLabel:
+                        '${settings.portProbeTimeout.inMilliseconds} ms',
+                    value: settings.portProbeTimeout.inMilliseconds.toDouble(),
+                    min: 200,
+                    max: 3000,
+                    divisions: 28,
+                    onChanged: (value) => _update(
+                      (s) => s.copyWith(
+                        portProbeTimeout: Duration(milliseconds: value.round()),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
+          PageSection(
+            title: 'Keşif yöntemleri',
+            subtitle: 'Taramada cihazları bulmak ve tanımak için kullanılır.',
+            child: SurfaceCard(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final method in DiscoveryMethod.values)
+                    FilterChip(
+                      label: Text(method.label),
+                      selected: settings.methods.contains(method),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      onSelected: (selected) => _update(
+                        (s) => s.copyWith(
+                          methods: selected
+                              ? {...s.methods, method}
+                              : ({...s.methods}..remove(method)),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+          PageSection(
+            title: 'Sınırlı port listesi',
+            subtitle:
+                'Yalnızca cihaz türü tahmini için bağlantı denemesi yapılır; '
+                'veri gönderilmez.',
+            child: SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _portsController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      helperText: 'Virgülle ayırın. En fazla $_maxPorts port.',
+                      errorText: _portsError,
+                    ),
+                    onSubmitted: (_) => _savePorts(),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          _portsController.text = const ScanSettings()
+                              .limitedPorts
+                              .join(', ');
+                          _savePorts();
+                        },
+                        child: const Text('Varsayılana dön'),
+                      ),
+                      FilledButton(
+                        onPressed: _savePorts,
+                        child: const Text('Portları kaydet'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
           const _DiagnosticsSection(),
-          const SizedBox(height: 24),
-          Text('Trafik', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Card(
-            child: ListTile(
-              title: const Text('Trafik kaynağı'),
-              subtitle: const Text(
-                'Keşif modu veya router entegrasyonu, bağlantı testi, saklama '
-                'süresi ve MB/MiB tercihi',
-              ),
-              trailing: const ThemedHugeIcon(
-                HugeIcons.strokeRoundedArrowRight01,
-              ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const TrafficSettingsScreen(),
+          const SizedBox(height: 28),
+          PageSection(
+            title: 'Trafik',
+            child: SurfaceCard(
+              padding: EdgeInsets.zero,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const TrafficSettingsScreen(),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const IconBadge(
+                          icon: HugeIcons.strokeRoundedChartLineData01,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Trafik kaynağı',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Keşif modu veya router entegrasyonu, bağlantı '
+                                'testi, saklama süresi ve MB/MiB tercihi',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ThemedHugeIcon(
+                          HugeIcons.strokeRoundedArrowRight01,
+                          size: 18,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -239,6 +307,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 class _SliderSetting extends StatelessWidget {
   const _SliderSetting({
     required this.label,
+    required this.description,
     required this.valueLabel,
     required this.value,
     required this.min,
@@ -248,6 +317,7 @@ class _SliderSetting extends StatelessWidget {
   });
 
   final String label;
+  final String description;
   final String valueLabel;
   final double value;
   final double min;
@@ -257,22 +327,77 @@ class _SliderSetting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(width: 180, child: Text(label)),
-        Expanded(
-          child: Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions,
-            label: valueLabel,
-            semanticFormatterCallback: (_) => '$label $valueLabel',
-            onChanged: onChanged,
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                constraints: const BoxConstraints(minWidth: 64),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  valueLabel,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        SizedBox(width: 80, child: Text(valueLabel, textAlign: TextAlign.end)),
-      ],
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 4,
+              tickMarkShape: SliderTickMarkShape.noTickMark,
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            ),
+            child: Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              label: valueLabel,
+              semanticFormatterCallback: (_) => '$label $valueLabel',
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -321,38 +446,69 @@ class _DiagnosticsSectionState extends ConsumerState<_DiagnosticsSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Ağ tanılama', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text(
+    final scheme = theme.colorScheme;
+    return PageSection(
+      title: 'Ağ tanılama',
+      subtitle:
           'Taramanın kullandığı araçları (ping, ARP, reverse DNS, mDNS) '
-          'gateway\'e karşı bir kez çalıştırır ve sonuçları gösterir. Tarama '
-          'beklenenden az bilgi bulduysa nedenini gösterir.',
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: _running ? null : _run,
-          child: Text(_running ? 'Çalışıyor…' : 'Ağ tanılamayı çalıştır'),
-        ),
-        if (_report != null) ...[
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
+          'gateway\'e karşı bir kez çalıştırır. Tarama beklenenden az bilgi '
+          'bulduysa nedenini gösterir.',
+      child: SurfaceCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const IconBadge(icon: HugeIcons.strokeRoundedStethoscope),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    _report == null
+                        ? 'Gateway\'e karşı tek seferlik kontrol'
+                        : 'Son tanılama sonucu',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.tonalIcon(
+                  onPressed: _running ? null : _run,
+                  icon: _running
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const ThemedHugeIcon(
+                          HugeIcons.strokeRoundedPlay,
+                          size: 16,
+                        ),
+                  label: Text(
+                    _running ? 'Çalışıyor…' : 'Ağ tanılamayı çalıştır',
+                  ),
+                ),
+              ],
             ),
-            child: SelectableText(
-              _report!,
-              style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'Menlo'),
-            ),
-          ),
-        ],
-      ],
+            if (_report != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: SelectableText(
+                  _report!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontFamily: 'Menlo',
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

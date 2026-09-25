@@ -150,7 +150,17 @@ class _DevicesBody extends ConsumerWidget {
                         totalCount: devices.length,
                       ),
                       const Divider(height: 1),
-                      Expanded(child: content),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: KeyedSubtree(
+                            key: ValueKey(viewMode),
+                            child: content,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
