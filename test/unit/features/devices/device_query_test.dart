@@ -34,8 +34,12 @@ void main() {
     makeDevice(4, '172.16.20.5', status: DeviceStatus.unknown),
   ];
 
-  List<int> ids(DeviceQuery q) =>
-      applyDeviceQuery(devices, q).map((d) => d.id).toList();
+  // These tests predate the "hide uninformative offline" default and cover
+  // sorting/searching/other filters, so they opt out of it.
+  List<int> ids(DeviceQuery q) => applyDeviceQuery(
+    devices,
+    q.copyWith(hideUninformativeOffline: false),
+  ).map((d) => d.id).toList();
 
   test('sorts by IP numerically, not lexically', () {
     expect(ids(const DeviceQuery()), [3, 2, 1, 4]);
@@ -94,6 +98,7 @@ void main() {
         DeviceQuery(
           sortField: DeviceSortField.dailyTraffic,
           ascending: ascending,
+          hideUninformativeOffline: false,
         ),
         dailyTrafficBytes: traffic,
       ).map((d) => d.id).toList();
@@ -153,6 +158,31 @@ void main() {
         const DeviceQuery(types: {DeviceType.unknown}),
       ),
       isEmpty,
+    );
+  });
+
+  test('hides offline devices with no info by default; keeps named ones', () {
+    // Device 4: unknown status, no MAC/name/vendor -> a ghost.
+    // Device 3: offline but the user named it "Yazıcım" -> kept.
+    final visible = applyDeviceQuery(
+      devices,
+      const DeviceQuery(),
+    ).map((d) => d.id).toList();
+    expect(visible, isNot(contains(4)));
+    expect(visible, contains(3));
+    // Turning the option off brings the ghost back.
+    expect(
+      applyDeviceQuery(
+        devices,
+        const DeviceQuery(hideUninformativeOffline: false),
+      ).map((d) => d.id),
+      contains(4),
+    );
+    // An online device with no info is never hidden.
+    final onlineGhost = [makeDevice(9, '172.16.14.99')];
+    expect(
+      applyDeviceQuery(onlineGhost, const DeviceQuery()).map((d) => d.id),
+      [9],
     );
   });
 }

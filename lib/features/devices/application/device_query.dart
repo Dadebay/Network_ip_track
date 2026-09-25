@@ -24,6 +24,7 @@ class DeviceQuery {
     this.vendors = const {},
     this.subnet,
     this.onlyPingConfirmed = false,
+    this.hideUninformativeOffline = true,
     this.sortField = DeviceSortField.ip,
     this.ascending = true,
   });
@@ -52,6 +53,13 @@ class DeviceQuery {
   /// networks where port-probe liveness turns out to be unreliable.
   final bool onlyPingConfirmed;
 
+  /// Hide offline devices that carry no identifying evidence at all (see
+  /// [Device.isUninformative]) — the middlebox "ghost" rows. On by default;
+  /// it declutters without hiding anything real (online or identifiable
+  /// devices always show). Not counted in [hasFilters]: it's a standing
+  /// display preference, not a search the user is running.
+  final bool hideUninformativeOffline;
+
   /// Filter value standing for "no OS/vendor known".
   static const unknownValue = 'Bilinmiyor';
   final DeviceSortField sortField;
@@ -74,6 +82,7 @@ class DeviceQuery {
     Set<String>? vendors,
     Cidr? Function()? subnet,
     bool? onlyPingConfirmed,
+    bool? hideUninformativeOffline,
     DeviceSortField? sortField,
     bool? ascending,
   }) {
@@ -85,6 +94,8 @@ class DeviceQuery {
       vendors: vendors ?? this.vendors,
       subnet: subnet != null ? subnet() : this.subnet,
       onlyPingConfirmed: onlyPingConfirmed ?? this.onlyPingConfirmed,
+      hideUninformativeOffline:
+          hideUninformativeOffline ?? this.hideUninformativeOffline,
       sortField: sortField ?? this.sortField,
       ascending: ascending ?? this.ascending,
     );
@@ -146,6 +157,11 @@ List<Device> applyDeviceQuery(
     final subnet = query.subnet;
     if (subnet != null && !subnet.contains(device.currentIp)) return false;
     if (query.onlyPingConfirmed && !device.pingConfirmed) return false;
+    if (query.hideUninformativeOffline &&
+        device.status != DeviceStatus.online &&
+        device.isUninformative) {
+      return false;
+    }
     return matchesSearch(device);
   }).toList();
 

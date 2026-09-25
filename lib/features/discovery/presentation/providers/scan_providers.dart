@@ -187,11 +187,25 @@ final interruptedSessionsCleanupProvider = FutureProvider<void>((ref) {
       .markInterruptedSessionsPaused();
 });
 
+/// Bumped to force [resumableSessionProvider] to refetch — used by discard,
+/// which runs inside [ScanController] and so can't invalidate a provider
+/// that depends on the controller (that would be a dependency cycle).
+class ResumableRefresh extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state++;
+}
+
+final resumableRefreshProvider = NotifierProvider<ResumableRefresh, int>(
+  ResumableRefresh.new,
+);
+
 final resumableSessionProvider = FutureProvider.autoDispose<ScanSessionRecord?>(
   (ref) async {
     await ref.watch(interruptedSessionsCleanupProvider.future);
-    // Re-evaluate whenever a scan changes status.
+    // Re-evaluate whenever a scan changes status, or discard bumps this.
     ref.watch(scanControllerProvider.select((state) => state.progress?.status));
+    ref.watch(resumableRefreshProvider);
     return ref.watch(scanSessionRepositoryProvider).findResumableSession();
   },
 );
@@ -280,7 +294,7 @@ class ScanController extends Notifier<ScanState> {
         progress: progress.copyWith(status: ScanSessionStatus.cancelled),
       );
     }
-    ref.invalidate(resumableSessionProvider);
+    ref.read(resumableRefreshProvider.notifier).bump();
   }
 
   Future<void> _launch(

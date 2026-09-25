@@ -88,6 +88,22 @@ class Device {
   String? get shortHostname =>
       hostname?.replaceFirst(RegExp(r'\.local\.?$', caseSensitive: false), '');
 
+  /// A device with no identifying evidence: never answered a ping, and no
+  /// MAC, hostname, announced name, vendor or model. On some networks a
+  /// middlebox answers a probe for every address, creating offline "ghost"
+  /// rows like this; there is nothing to show for them.
+  bool get isUninformative =>
+      !pingConfirmed &&
+      !isKnown &&
+      customName == null &&
+      customType == null &&
+      note == null &&
+      macAddress == null &&
+      hostname == null &&
+      discoveredName == null &&
+      vendor == null &&
+      model == null;
+
   /// Whether a name beyond the bare IP is known.
   bool get hasName =>
       customName != null || discoveredName != null || hostname != null;

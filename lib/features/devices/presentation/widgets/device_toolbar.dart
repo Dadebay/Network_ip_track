@@ -132,6 +132,16 @@ class _DeviceToolbarState extends ConsumerState<DeviceToolbar> {
     return MenuAnchor(
       menuChildren: [
         CheckboxMenuButton(
+          value: query.hideUninformativeOffline,
+          closeOnActivate: false,
+          onChanged: (_) => _update(
+            (q) => q.copyWith(
+              hideUninformativeOffline: !q.hideUninformativeOffline,
+            ),
+          ),
+          child: const Text('Bilgisi olmayan çevrimdışı cihazları gizle'),
+        ),
+        CheckboxMenuButton(
           value: query.onlyPingConfirmed,
           closeOnActivate: false,
           onChanged: (_) => _update(
