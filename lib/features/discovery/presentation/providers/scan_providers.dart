@@ -23,6 +23,8 @@ import '../../domain/entities/scan_settings.dart';
 import '../../domain/repositories/arp_table_provider.dart';
 import '../../domain/repositories/http_banner_provider.dart';
 import '../../domain/repositories/upnp_description_provider.dart';
+import '../../domain/repositories/mdns_name_provider.dart';
+import '../../domain/repositories/ws_discovery_provider.dart';
 import '../../domain/repositories/mdns_provider.dart';
 import '../../domain/repositories/netbios_provider.dart';
 import '../../domain/repositories/network_diagnostics.dart';
@@ -36,6 +38,8 @@ import '../../infrastructure/drift_scan_session_repository.dart';
 import '../../infrastructure/macos/macos_arp_table_provider.dart';
 import '../../infrastructure/http/io_http_banner_provider.dart';
 import '../../infrastructure/http/io_upnp_description_provider.dart';
+import '../../infrastructure/mdns/udp_mdns_name_provider.dart';
+import '../../infrastructure/wsd/udp_ws_discovery_provider.dart';
 import '../../infrastructure/macos/macos_mdns_provider.dart';
 import '../../infrastructure/macos/macos_network_diagnostics.dart';
 import '../../infrastructure/macos/native_icmp_ping_provider.dart';
@@ -74,6 +78,12 @@ final httpBannerAdapterProvider = Provider<HttpBannerProvider>(
 final upnpDescriptionAdapterProvider = Provider<UpnpDescriptionProvider>(
   (ref) => const IoUpnpDescriptionProvider(),
 );
+final mdnsNameAdapterProvider = Provider<MdnsNameProvider>(
+  (ref) => UdpMdnsNameProvider(),
+);
+final wsDiscoveryAdapterProvider = Provider<WsDiscoveryProvider>(
+  (ref) => UdpWsDiscoveryProvider(),
+);
 final netbiosAdapterProvider = Provider<NetbiosProvider>(
   (ref) => UdpNetbiosProvider(),
 );
@@ -99,6 +109,8 @@ final scanCoordinatorProvider = Provider<ScanCoordinator>((ref) {
       netbios: ref.watch(netbiosAdapterProvider),
       httpBanner: ref.watch(httpBannerAdapterProvider),
       upnpDescription: ref.watch(upnpDescriptionAdapterProvider),
+      mdnsName: ref.watch(mdnsNameAdapterProvider),
+      wsDiscovery: ref.watch(wsDiscoveryAdapterProvider),
     ),
     sessions: ref.watch(scanSessionRepositoryProvider),
     devices: ref.watch(deviceRepositoryProvider),

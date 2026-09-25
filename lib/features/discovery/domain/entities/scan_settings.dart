@@ -17,6 +17,7 @@ class ScanSettings {
       DiscoveryMethod.netbios,
       DiscoveryMethod.limitedPortScan,
       DiscoveryMethod.httpBanner,
+      DiscoveryMethod.wsDiscovery,
     },
     this.limitedPorts = const [
       22,

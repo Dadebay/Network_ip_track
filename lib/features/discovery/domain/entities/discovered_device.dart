@@ -2,6 +2,7 @@ import '../../../../core/utils/ipv4_address.dart';
 import '../repositories/http_banner_provider.dart';
 import 'mdns_service_record.dart';
 import 'upnp_device_info.dart';
+import 'ws_discovery_match.dart';
 
 /// One host's accumulated discovery signals for a single scan pass, streamed
 /// to the UI/repository as soon as it's known — the pipeline enriches this
@@ -17,6 +18,7 @@ class DiscoveredDevice {
     this.ttl,
     this.httpBanner,
     this.upnp,
+    this.wsDiscovery = const [],
     this.mdnsRecords = const [],
     this.ssdpServices = const [],
     this.openPorts = const [],
@@ -43,6 +45,9 @@ class DiscoveredDevice {
   /// What the device's UPnP description (from its SSDP reply) says.
   final UpnpDeviceInfo? upnp;
 
+  /// WS-Discovery ProbeMatches (Windows PCs, printers, ONVIF cameras).
+  final List<WsDiscoveryMatch> wsDiscovery;
+
   final List<MdnsServiceRecord> mdnsRecords;
   final List<String> ssdpServices;
   final List<int> openPorts;
@@ -67,6 +72,7 @@ class DiscoveredDevice {
       ttl: other.ttl ?? ttl,
       httpBanner: other.httpBanner ?? httpBanner,
       upnp: other.upnp ?? upnp,
+      wsDiscovery: [...wsDiscovery, ...other.wsDiscovery],
       mdnsRecords: [...mdnsRecords, ...other.mdnsRecords],
       ssdpServices: {...ssdpServices, ...other.ssdpServices}.toList(),
       openPorts: {...openPorts, ...other.openPorts}.toList(),

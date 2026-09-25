@@ -2,6 +2,7 @@ import '../../../core/utils/mac_address.dart';
 import '../../devices/domain/entities/device_confidence.dart';
 import '../../devices/domain/entities/device_type.dart';
 import '../../discovery/domain/entities/discovered_device.dart';
+import '../../discovery/domain/entities/ws_discovery_match.dart';
 import '../../discovery/domain/repositories/http_banner_provider.dart';
 import '../domain/entities/device_classification.dart';
 
@@ -42,6 +43,8 @@ class DeviceClassifier {
       ..._netbiosEvidence(device.netbiosName),
       ..._portEvidence(device.openPorts),
       ..._ttlEvidence(device.ttl),
+      ..._wsDiscoveryEvidence(device.wsDiscovery),
+      ..._privateMacEvidence(device),
     ];
 
     final (os, osConfidence, osReasons) = _decide<String>(
@@ -440,6 +443,61 @@ class DeviceClassifier {
         reason: 'Yalnızca port 22 açık (SSH)',
       );
     }
+  }
+
+  Iterable<_Evidence> _wsDiscoveryEvidence(
+    List<WsDiscoveryMatch> matches,
+  ) sync* {
+    if (matches.isEmpty) return;
+    final types = matches
+        .expand((match) => match.types)
+        .join(' ')
+        .toLowerCase();
+    const reason = 'WS-Discovery yanıtı';
+    if (types.contains('networkvideotransmitter')) {
+      yield const _Evidence(
+        type: DeviceType.camera,
+        weight: 0.85,
+        reason: '$reason (ONVIF video cihazı)',
+      );
+    } else if (types.contains('printdevicetype') ||
+        types.contains('printer') ||
+        types.contains('scandevicetype')) {
+      yield const _Evidence(
+        type: DeviceType.printer,
+        weight: 0.8,
+        reason: '$reason (yazıcı/tarayıcı)',
+      );
+    } else if (types.contains('computer')) {
+      yield const _Evidence(
+        type: DeviceType.windowsComputer,
+        weight: 0.6,
+        reason: '$reason (Windows bilgisayar)',
+      );
+      yield const _Evidence(
+        os: 'Windows',
+        weight: 0.6,
+        reason: '$reason (Windows bilgisayar)',
+      );
+    }
+  }
+
+  /// Phones and tablets use a private (randomized) Wi-Fi MAC by default.
+  /// Together with a Unix-like TTL and no services it's a weak hint, not
+  /// enough on its own for more than `Tahmini`.
+  Iterable<_Evidence> _privateMacEvidence(DiscoveredDevice device) sync* {
+    final mac = device.macAddress;
+    final ttl = device.ttl;
+    if (mac == null || !isLocallyAdministeredMac(mac)) return;
+    if (ttl == null || ttl > 64) return;
+    if (device.openPorts.isNotEmpty || device.ssdpServices.isNotEmpty) return;
+    yield _Evidence(
+      type: DeviceType.phone,
+      weight: 0.45,
+      reason:
+          'Özel/rastgele MAC ve TTL $ttl, açık servis yok: çoğunlukla '
+          'telefon veya tablet',
+    );
   }
 
   Iterable<_Evidence> _ttlEvidence(int? ttl) sync* {

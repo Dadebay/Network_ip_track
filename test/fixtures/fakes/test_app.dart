@@ -48,6 +48,8 @@ Widget buildTestApp({
           directory: () async => Directory.systemTemp.createTemp('appearance'),
         ),
       ),
+      mdnsNameAdapterProvider.overrideWithValue(FakeMdnsNameProvider()),
+      wsDiscoveryAdapterProvider.overrideWithValue(FakeWsDiscoveryProvider()),
       upnpDescriptionAdapterProvider.overrideWithValue(
         FakeUpnpDescriptionProvider(),
       ),

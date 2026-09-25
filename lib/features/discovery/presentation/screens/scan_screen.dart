@@ -527,8 +527,9 @@ class _PlanPreview extends StatelessWidget {
               ],
             )
           else
-            ..._details(context, plan),
-          const SizedBox(height: 18),
+            _stats(plan),
+          const SizedBox(height: 16),
+          // Right under the summary, so it's visible without scrolling.
           SizedBox(
             height: 44,
             child: FilledButton.icon(
@@ -537,7 +538,7 @@ class _PlanPreview extends StatelessWidget {
               label: Text(running ? 'Tarama sürüyor' : 'Taramayı başlat'),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Center(
             child: TextButton.icon(
               onPressed: onOpenSettings,
@@ -548,44 +549,50 @@ class _PlanPreview extends StatelessWidget {
               label: const Text('Tarama ayarları'),
             ),
           ),
+          if (plan != null) ...[
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            ..._details(context, plan),
+          ],
         ],
       ),
     );
   }
+
+  Widget _stats(ScanPlan plan) => Row(
+    children: [
+      Expanded(
+        child: _StatTile(
+          icon: HugeIcons.strokeRoundedGridView,
+          label: 'Aday IP',
+          value: formatCount(plan.totalCandidateHosts),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: _StatTile(
+          icon: HugeIcons.strokeRoundedTimer02,
+          label: 'Tahmini süre',
+          value: formatDuration(plan.estimatedDuration),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: _StatTile(
+          icon: HugeIcons.strokeRoundedLayers01,
+          label: 'Parça',
+          value: formatCount(plan.chunks.length),
+        ),
+      ),
+    ],
+  );
 
   List<Widget> _details(BuildContext context, ScanPlan plan) {
     final settings = plan.settings;
     const shownCidrs = 12;
     final cidrs = plan.chunks.map((c) => c.cidr.toString()).toList();
     return [
-      Row(
-        children: [
-          Expanded(
-            child: _StatTile(
-              icon: HugeIcons.strokeRoundedGridView,
-              label: 'Aday IP',
-              value: formatCount(plan.totalCandidateHosts),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _StatTile(
-              icon: HugeIcons.strokeRoundedTimer02,
-              label: 'Tahmini süre',
-              value: formatDuration(plan.estimatedDuration),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _StatTile(
-              icon: HugeIcons.strokeRoundedLayers01,
-              label: 'Parça',
-              value: formatCount(cidrs.length),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 18),
       _Detail(
         label: 'CIDR listesi (${formatCount(cidrs.length)} parça)',
         child: SelectableText(

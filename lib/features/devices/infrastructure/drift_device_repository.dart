@@ -152,6 +152,7 @@ class DriftDeviceRepository implements DeviceRepository {
                   ...discovered.ssdpServices,
                   ?discovered.httpBanner?.describe(),
                   ?discovered.upnp?.describe(),
+                  for (final match in discovered.wsDiscovery) match.describe(),
                 ]),
               ),
               signalsJson: Value(

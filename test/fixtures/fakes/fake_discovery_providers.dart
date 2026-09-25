@@ -7,6 +7,7 @@ import 'package:network_monitor/features/discovery/domain/entities/mdns_service_
 import 'package:network_monitor/features/discovery/domain/entities/ping_reply.dart';
 import 'package:network_monitor/features/discovery/domain/entities/ssdp_response.dart';
 import 'package:network_monitor/features/discovery/domain/entities/upnp_device_info.dart';
+import 'package:network_monitor/features/discovery/domain/entities/ws_discovery_match.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/arp_table_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/mdns_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/netbios_provider.dart';
@@ -15,6 +16,8 @@ import 'package:network_monitor/features/discovery/domain/repositories/port_prob
 import 'package:network_monitor/features/discovery/domain/repositories/reverse_dns_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/ssdp_provider.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/upnp_description_provider.dart';
+import 'package:network_monitor/features/discovery/domain/repositories/mdns_name_provider.dart';
+import 'package:network_monitor/features/discovery/domain/repositories/ws_discovery_provider.dart';
 
 /// In-memory stand-ins for every discovery adapter, so engine/coordinator
 /// tests never touch the real network.
@@ -150,4 +153,25 @@ class FakeUpnpDescriptionProvider implements UpnpDescriptionProvider {
     String location, {
     required Duration timeout,
   }) async => byLocation[location];
+}
+
+class FakeMdnsNameProvider implements MdnsNameProvider {
+  FakeMdnsNameProvider([this.names = const {}]);
+  final Map<Ipv4Address, String> names;
+
+  @override
+  Future<String?> lookupName(
+    Ipv4Address address, {
+    required Duration timeout,
+  }) async => names[address];
+}
+
+class FakeWsDiscoveryProvider implements WsDiscoveryProvider {
+  FakeWsDiscoveryProvider([this.matches = const {}]);
+  final Map<Ipv4Address, List<WsDiscoveryMatch>> matches;
+
+  @override
+  Future<Map<Ipv4Address, List<WsDiscoveryMatch>>> probe({
+    required Duration timeout,
+  }) async => matches;
 }

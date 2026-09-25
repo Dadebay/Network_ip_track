@@ -6,6 +6,7 @@ import 'package:network_monitor/features/devices/domain/entities/device_confiden
 import 'package:network_monitor/features/devices/domain/entities/device_type.dart';
 import 'package:network_monitor/features/discovery/domain/entities/discovered_device.dart';
 import 'package:network_monitor/features/discovery/domain/entities/mdns_service_record.dart';
+import 'package:network_monitor/features/discovery/domain/entities/ws_discovery_match.dart';
 import 'package:network_monitor/features/discovery/domain/repositories/http_banner_provider.dart';
 
 DiscoveredDevice device({
@@ -235,5 +236,30 @@ void main() {
     );
     expect(result.type, DeviceType.camera);
     expect(result.os, 'Gömülü Linux');
+  });
+
+  test('WS-Discovery types classify cameras and Windows PCs', () {
+    DeviceClassification withWsd(List<String> types) => classifier.classify(
+      device: DiscoveredDevice(
+        ipAddress: Ipv4Address.parse('172.16.14.211'),
+        respondedAt: DateTime(2026, 9, 25),
+        wsDiscovery: [WsDiscoveryMatch(types: types)],
+      ),
+    );
+    expect(withWsd(['dn:NetworkVideoTransmitter']).type, DeviceType.camera);
+    final pc = withWsd(['wsdp:Device', 'pub:Computer']);
+    expect(pc.type, DeviceType.windowsComputer);
+    expect(pc.os, 'Windows');
+  });
+
+  test('private MAC + TTL 64 + no services: estimated phone', () {
+    final result = classify(device(mac: '5a:11:22:33:44:55', ttl: 64));
+    expect(result.type, DeviceType.phone);
+    expect(result.typeConfidence, DeviceConfidence.estimated);
+    // A service-exposing host with a private MAC is not assumed a phone.
+    expect(
+      classify(device(mac: '5a:11:22:33:44:55', ttl: 64, ports: [22])).type,
+      isNot(DeviceType.phone),
+    );
   });
 }

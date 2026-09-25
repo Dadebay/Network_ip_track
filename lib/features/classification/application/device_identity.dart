@@ -62,6 +62,11 @@ DeviceIdentity deriveDeviceIdentity(DiscoveredDevice device) {
     );
   }
 
+  for (final match in device.wsDiscovery) {
+    name ??= _clean(match.onvifScope('name'));
+    model ??= _clean(match.onvifScope('hardware'));
+  }
+
   model ??= _meaningfulTitle(banner?.title) ?? _meaningfulTitle(banner?.realm);
 
   if (name != null && model != null && _same(name, model)) name = null;

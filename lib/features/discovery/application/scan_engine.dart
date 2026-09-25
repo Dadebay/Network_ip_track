@@ -16,6 +16,7 @@ import '../domain/entities/scan_settings.dart';
 import '../domain/entities/scan_stage.dart';
 import '../domain/entities/ssdp_response.dart';
 import '../domain/entities/upnp_device_info.dart';
+import '../domain/entities/ws_discovery_match.dart';
 import '../domain/repositories/arp_table_provider.dart';
 import '../domain/repositories/http_banner_provider.dart';
 import '../domain/repositories/mdns_provider.dart';
@@ -25,6 +26,8 @@ import '../domain/repositories/port_probe_provider.dart';
 import '../domain/repositories/reverse_dns_provider.dart';
 import '../domain/repositories/ssdp_provider.dart';
 import '../domain/repositories/upnp_description_provider.dart';
+import '../domain/repositories/ws_discovery_provider.dart';
+import '../domain/repositories/mdns_name_provider.dart';
 import 'scan_control.dart';
 
 /// Something the engine reports while running.
@@ -97,6 +100,8 @@ class ScanEngine {
     required NetbiosProvider netbios,
     HttpBannerProvider? httpBanner,
     UpnpDescriptionProvider? upnpDescription,
+    MdnsNameProvider? mdnsName,
+    WsDiscoveryProvider? wsDiscovery,
     this.mdnsWindow = const Duration(seconds: 4),
     this.ssdpWindow = const Duration(seconds: 3),
     this.progressInterval = const Duration(milliseconds: 250),
@@ -110,6 +115,8 @@ class ScanEngine {
        _netbios = netbios,
        _httpBanner = httpBanner,
        _upnpDescription = upnpDescription,
+       _mdnsName = mdnsName,
+       _wsDiscovery = wsDiscovery,
        _clock = clock ?? DateTime.now;
 
   final ArpTableProvider _arpTable;
@@ -121,6 +128,8 @@ class ScanEngine {
   final NetbiosProvider _netbios;
   final HttpBannerProvider? _httpBanner;
   final UpnpDescriptionProvider? _upnpDescription;
+  final MdnsNameProvider? _mdnsName;
+  final WsDiscoveryProvider? _wsDiscovery;
 
   /// Web ports whose front page is read for classification, in preference
   /// order; only ones the limited port check found open are tried.
@@ -196,6 +205,7 @@ class _ScanRun {
   Map<Ipv4Address, ArpEntry> _arpByIp = const {};
   Map<Ipv4Address, List<MdnsServiceRecord>> _mdnsByIp = const {};
   Map<Ipv4Address, List<SsdpResponse>> _ssdpByIp = const {};
+  Map<Ipv4Address, List<WsDiscoveryMatch>> _wsdByIp = const {};
   DateTime _lastProgressAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   bool _uses(DiscoveryMethod method) => settings.methods.contains(method);
@@ -291,6 +301,12 @@ class _ScanRun {
       _uses(DiscoveryMethod.ssdp)
           ? listen(() => engine._ssdp.search(timeout: engine.ssdpWindow))
           : Future.value(const <Ipv4Address, List<SsdpResponse>>{}),
+      switch (engine._wsDiscovery) {
+        final wsd? when _uses(DiscoveryMethod.wsDiscovery) => listen(
+          () => wsd.probe(timeout: engine.ssdpWindow),
+        ),
+        _ => Future.value(const <Ipv4Address, List<WsDiscoveryMatch>>{}),
+      },
     ]);
 
     final arpEntries = results[0] as List<ArpEntry>;
@@ -302,6 +318,7 @@ class _ScanRun {
     };
     _mdnsByIp = results[1] as Map<Ipv4Address, List<MdnsServiceRecord>>;
     _ssdpByIp = results[2] as Map<Ipv4Address, List<SsdpResponse>>;
+    _wsdByIp = results[3] as Map<Ipv4Address, List<WsDiscoveryMatch>>;
   }
 
   Future<void> _probeCandidates() async {
@@ -311,6 +328,7 @@ class _ScanRun {
               ..._arpByIp.keys,
               ..._mdnsByIp.keys,
               ..._ssdpByIp.keys,
+              ..._wsdByIp.keys,
               ...context.knownHosts,
             }
             .where(
@@ -481,6 +499,11 @@ class _ScanRun {
       alive = true;
       signals.add('SSDP/UPnP yanıtı');
     }
+    final wsdMatches = _wsdByIp[address] ?? const <WsDiscoveryMatch>[];
+    if (wsdMatches.isNotEmpty) {
+      alive = true;
+      signals.add('WS-Discovery yanıtı');
+    }
 
     // Probed before the liveness verdict: a routed host that drops ICMP
     // (and whose MAC ARP can't reveal) is still found by an open port.
@@ -514,6 +537,17 @@ class _ScanRun {
         .map((record) => record.hostname)
         .whereType<String>()
         .firstOrNull;
+    final mdnsName = engine._mdnsName;
+    if (hostname == null &&
+        mdnsName != null &&
+        _uses(DiscoveryMethod.mdns) &&
+        !control.isStopRequested) {
+      hostname = await mdnsName.lookupName(
+        address,
+        timeout: settings.portProbeTimeout,
+      );
+      if (hostname != null) signals.add('mDNS adı: $hostname');
+    }
     String? netbiosName;
     if (hostname == null &&
         _uses(DiscoveryMethod.netbios) &&
@@ -562,6 +596,7 @@ class _ScanRun {
       respondedAt: engine._clock(),
       httpBanner: banner,
       upnp: upnp,
+      wsDiscovery: wsdMatches,
       macAddress: arpEntry?.macAddress,
       hostname: hostname ?? netbiosName,
       netbiosName: netbiosName,

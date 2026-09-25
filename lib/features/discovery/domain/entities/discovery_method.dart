@@ -8,7 +8,8 @@ enum DiscoveryMethod {
   ssdp,
   netbios,
   limitedPortScan,
-  httpBanner;
+  httpBanner,
+  wsDiscovery;
 
   String get label => switch (this) {
     DiscoveryMethod.arpTable => 'ARP/neighbor tablosu',
@@ -19,5 +20,6 @@ enum DiscoveryMethod {
     DiscoveryMethod.netbios => 'NetBIOS',
     DiscoveryMethod.limitedPortScan => 'Sınırlı port kontrolü',
     DiscoveryMethod.httpBanner => 'Web arayüzü başlığı',
+    DiscoveryMethod.wsDiscovery => 'WS-Discovery/ONVIF',
   };
 }
