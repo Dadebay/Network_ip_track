@@ -17,6 +17,20 @@ class AppTheme {
       colorScheme: colorScheme,
       fontFamily: 'Gilroy',
       scaffoldBackgroundColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 60,
+        titleSpacing: 16,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Gilroy',
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSurface,
+        ),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(

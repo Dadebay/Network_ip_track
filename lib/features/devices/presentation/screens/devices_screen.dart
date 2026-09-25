@@ -146,18 +146,9 @@ class _DevicesBody extends ConsumerWidget {
                         subnets: subnets,
                         osNames: _valuesOf(devices, (d) => d.inferredOs),
                         vendors: _valuesOf(devices, (d) => d.vendor),
+                        visibleCount: visible.length,
+                        totalCount: devices.length,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '${visible.length} / ${devices.length} cihaz',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
                       const Divider(height: 1),
                       Expanded(child: content),
                     ],
