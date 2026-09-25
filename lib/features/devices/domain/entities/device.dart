@@ -69,7 +69,15 @@ class Device {
 
   /// What the tree/list should show as the device's name: the user's own
   /// name first, then hostname, then the raw IP as a last resort.
-  String get displayName => customName ?? hostname ?? currentIp.toString();
+  String get displayName => customName ?? shortHostname ?? currentIp.toString();
+
+  /// [hostname] without the mDNS `.local` suffix, which adds nothing on a
+  /// LAN and pushes long serial-number names (e.g. IP cameras) off-screen.
+  String? get shortHostname =>
+      hostname?.replaceFirst(RegExp(r'\.local\.?$', caseSensitive: false), '');
+
+  /// Whether a name beyond the bare IP is known.
+  bool get hasName => customName != null || hostname != null;
 
   /// The user's type when set, otherwise the inferred one — used for
   /// grouping, filtering and icons.

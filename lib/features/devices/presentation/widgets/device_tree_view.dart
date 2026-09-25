@@ -558,7 +558,7 @@ class _GatewayRow extends StatelessWidget {
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              device.hostname ?? 'Gateway',
+              device.shortHostname ?? 'Gateway',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelLarge?.copyWith(
@@ -704,30 +704,39 @@ class _DeviceRow extends StatelessWidget {
               Flexible(
                 child: SizedBox(
                   width: 190,
-                  child: Text(
-                    device.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  // The IP always has its own column, so an unnamed device
+                  // shows a muted placeholder rather than the IP in the
+                  // name column and a gap where the IP should be.
+                  child: device.hasName
+                      ? Text(
+                          device.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        )
+                      : Text(
+                          'Adsız',
+                          maxLines: 1,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: scheme.outline,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
                 width: 108,
-                // The name already falls back to the IP when nothing else is
-                // known — don't show it twice.
-                child: device.displayName == device.currentIp.toString()
-                    ? null
-                    : Text(
-                        device.currentIp.toString(),
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
+                child: Text(
+                  device.currentIp.toString(),
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
               ),
               if (!narrow) ...[
                 const SizedBox(width: 8),

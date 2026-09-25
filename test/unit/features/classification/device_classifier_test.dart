@@ -6,6 +6,7 @@ import 'package:network_monitor/features/devices/domain/entities/device_confiden
 import 'package:network_monitor/features/devices/domain/entities/device_type.dart';
 import 'package:network_monitor/features/discovery/domain/entities/discovered_device.dart';
 import 'package:network_monitor/features/discovery/domain/entities/mdns_service_record.dart';
+import 'package:network_monitor/features/discovery/domain/repositories/http_banner_provider.dart';
 
 DiscoveredDevice device({
   String? mac,
@@ -205,5 +206,34 @@ void main() {
     );
     expect(withHostname.type, DeviceType.phone);
     expect(withHostname.os, 'Android');
+  });
+
+  test('PC motherboard NIC vendors: computer; router-only vendors: router', () {
+    for (final vendor in [
+      'ASUSTek COMPUTER INC.',
+      'GIGA-BYTE TECHNOLOGY CO.,LTD.',
+      'Intel Corporate',
+    ]) {
+      final result = classify(device(), vendor: vendor);
+      expect(result.type, DeviceType.windowsComputer, reason: vendor);
+      expect(result.typeConfidence, DeviceConfidence.estimated);
+    }
+    final tenda = classify(
+      device(),
+      vendor: 'Tenda Technology Co.,Ltd.Dongguan branch',
+    );
+    expect(tenda.type, DeviceType.routerGateway);
+  });
+
+  test('camera web interface is a camera, not generic IoT', () {
+    final result = classifier.classify(
+      device: DiscoveredDevice(
+        ipAddress: Ipv4Address.parse('172.16.14.211'),
+        respondedAt: DateTime(2026, 9, 25),
+        httpBanner: const HttpBanner(port: 80, realm: 'IPC'),
+      ),
+    );
+    expect(result.type, DeviceType.camera);
+    expect(result.os, 'Gömülü Linux');
   });
 }

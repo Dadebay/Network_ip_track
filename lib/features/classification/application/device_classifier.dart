@@ -582,6 +582,23 @@ const _vendorRules = [
     [(DeviceType.windowsComputer, 0.35)],
     ('Windows', 0.3),
   ),
+  // Motherboard / PC NIC makers. ASUS also sells routers, hence the small
+  // router weight — a router web banner still wins over this.
+  _VendorRule(
+    ['asustek'],
+    [(DeviceType.windowsComputer, 0.45), (DeviceType.routerGateway, 0.1)],
+  ),
+  _VendorRule(
+    ['giga-byte', 'gigabyte', 'micro-star', 'asrock', 'intel corporate'],
+    [(DeviceType.windowsComputer, 0.45)],
+  ),
+  _VendorRule(['super micro'], [(DeviceType.linuxComputerServer, 0.5)]),
+  // Unlike TP-Link/Netgear (smart plugs, cameras too), these sell almost
+  // only routers/APs/switches, so the vendor alone clears `Tahmini`.
+  _VendorRule(
+    ['tenda', 'mercusys', 'totolink', 'keenetic', 'ruijie', 'h3c'],
+    [(DeviceType.routerGateway, 0.45)],
+  ),
   _VendorRule(
     ['vmware', 'parallels', 'qemu'],
     [(DeviceType.linuxComputerServer, 0.3)],
@@ -642,7 +659,7 @@ final _webRules = [
   ),
   _HostnameRule(
     r'dahua|hikvision|uniview|\bnvr\b|\bdvr\b|\bipc\b|ip ?camera|network camera|netsurveillance|web service',
-    type: DeviceType.iotSmartHome,
+    type: DeviceType.camera,
     os: 'Gömülü Linux',
     weight: 0.8,
   ),
