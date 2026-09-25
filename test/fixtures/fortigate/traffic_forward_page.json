@@ -1,0 +1,7 @@
+{"http_method":"GET","results":[
+ {"date":"2026-09-25","time":"11:59:30","eventtime":1790323170000000000,"logid":"0000000013","type":"traffic","subtype":"forward","action":"close","srcip":"172.16.14.12","srcmac":"a4:83:e7:01:02:03","dstip":"142.250.184.14","sessionid":1001,"duration":1800,"sentbyte":1800000,"rcvdbyte":18000000},
+ {"date":"2026-09-25","time":"11:59:40","eventtime":"1790323180000000000","logid":"0000000020","type":"traffic","subtype":"forward","action":"accept","srcip":"172.16.14.40","srcmac":"00:1a:2b:3c:4d:5e","sessionid":"1002","duration":"3600","sentbyte":"9000000","rcvdbyte":"90000000","sentdelta":"100","rcvddelta":"2000"},
+ {"date":"2026-09-25","time":"11:59:50","eventtime":1790323190000000000,"logid":"0000000013","action":"deny","srcip":"172.16.14.12","srcmac":"a4:83:e7:01:02:03","sessionid":1003,"duration":0,"sentbyte":0,"rcvdbyte":0},
+ {"date":"2026-09-25","time":"11:59:55","eventtime":1790323195,"logid":"0000000013","action":"timeout","srcip":"172.16.14.77","sessionid":1004,"duration":10,"sentbyte":500,"rcvdbyte":5000},
+ {"date":"2026-09-25","time":"11:59:56","logid":"0000000013","action":"close","srcip":"172.16.14.78","sessionid":1005,"duration":10,"sentbyte":1,"rcvdbyte":1}
+],"vdom":"root","device":"memory","category":"traffic","subcategory":"forward","start":1,"rows":1000,"completed":100,"percent_logs_processed":100,"total_lines":5,"ready":true,"status":"success","version":"v7.2.5"}

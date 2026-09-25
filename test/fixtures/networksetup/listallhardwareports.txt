@@ -1,0 +1,14 @@
+Hardware Port: Wi-Fi
+Device: en0
+Ethernet Address: ac:de:48:00:11:22
+
+Hardware Port: Thunderbolt Ethernet
+Device: en5
+Ethernet Address: 3c:22:fb:aa:bb:cc
+
+Hardware Port: Thunderbolt Bridge
+Device: bridge0
+Ethernet Address: 3e:22:fb:aa:bb:01
+
+VLAN Configurations
+===================

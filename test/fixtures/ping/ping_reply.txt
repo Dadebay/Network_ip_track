@@ -1,0 +1,6 @@
+PING 172.16.14.254 (172.16.14.254): 56 data bytes
+64 bytes from 172.16.14.254: icmp_seq=0 ttl=255 time=2.418 ms
+
+--- 172.16.14.254 ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = 2.418/2.418/2.418/0.000 ms
